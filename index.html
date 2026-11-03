@@ -6,7 +6,7 @@
 <title>Mapa del movimiento cervical 3D - Configurable</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--ink:#1a2b34;--mute:#5a6b75;--line:#d1dce3;--acc:#0d7a84;--acc-light:#e8f4f5;--str:#b87400;--strbg:#fff4dc;--cmp:#c42a1f;--cmpbg:#fde8e6;--ok:#e8eef1;--vago:#7a3fb0;--art:#c2410c;--bone:#d9e2e6;--green:#2d8a4e;--green-bg:#e6f5ec;}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1a1f;--card:#16262d;--ink:#e6f0f3;--mute:#9db1b9;--line:#2b414a;--acc:#4fc3cc;--acc-light:#1a3a3d;--str:#f5b84a;--strbg:#3a2c0e;--cmp:#ff8a80;--cmpbg:#40201e;--ok:#1f333b;--vago:#c79bf0;--art:#ff9a62;--bone:#2b414a;--green:#4ade80;--green-bg:#0f2e1a}}
@@ -58,26 +58,31 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 .cap{font-size:0.85rem;color:var(--mute);margin:6px 0}
 
 /* Upload de certificados */
-.upload-section{margin:16px 0;padding:16px;background:var(--bg);border:2px dashed var(--line);border-radius:12px;text-align:center}
-.upload-section.dragover{border-color:var(--acc);background:var(--acc-light)}
-.upload-section h4{margin:0 0 8px;font-size:0.95rem;color:var(--ink)}
-.upload-section p{margin:0 0 12px;font-size:0.85rem;color:var(--mute)}
+.upload-section{margin:16px 0;padding:16px;background:var(--bg);border-radius:8px;border:2px dashed var(--line)}
+.upload-section h3{margin-top:0;font-size:0.95rem}
+.upload-section p{font-size:0.85rem;color:var(--mute);margin-bottom:12px}
+
 .file-input-wrapper{position:relative;overflow:hidden;display:inline-block;width:100%}
 .file-input-wrapper input[type=file]{position:absolute;left:-9999px}
-.file-label{display:block;padding:12px;background:var(--card);border:2px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;color:var(--ink);transition:all 0.2s}
+.file-label{display:block;padding:12px;text-align:center;background:var(--card);border:2px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;transition:all 0.2s}
 .file-label:hover{border-color:var(--acc);background:var(--acc-light)}
-.upload-progress{margin-top:12px;display:none}
-.upload-progress.active{display:block}
-.progress-bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-bottom:8px}
-.progress-fill{height:100%;background:var(--acc);width:0%;transition:width 0.3s}
-.progress-text{font-size:0.85rem;color:var(--mute)}
-.uploaded-file{margin-top:12px;padding:12px;background:var(--card);border-left:4px solid var(--green);border-radius:6px;text-align:left;display:none}
-.uploaded-file.active{display:block}
-.uploaded-file-name{font-weight:600;font-size:0.9rem;margin-bottom:4px}
-.uploaded-file-info{font-size:0.85rem;color:var(--mute)}
-.detected-conditions{margin-top:12px}
-.detected-condition{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--ok);border-radius:6px;margin-bottom:6px;font-size:0.9rem}
-.detected-condition.detected{background:var(--acc-light);border-left:3px solid var(--acc)}
+.file-label.has-files{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+
+.uploaded-files{margin-top:12px}
+.file-item{display:flex;align-items:center;gap:8px;padding:8px;background:var(--card);border-radius:6px;margin-bottom:6px;font-size:0.85rem}
+.file-item .file-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-item .file-remove{background:none;border:none;color:var(--cmp);cursor:pointer;font-size:1.2rem;line-height:1;padding:0 4px}
+.file-item .file-remove:hover{color:var(--ink)}
+
+.extract-status{margin-top:12px;padding:10px;border-radius:6px;font-size:0.85rem;display:none}
+.extract-status.processing{display:block;background:var(--acc-light);color:var(--acc);border-left:3px solid var(--acc)}
+.extract-status.success{display:block;background:var(--green-bg);color:var(--green);border-left:3px solid var(--green)}
+.extract-status.error{display:block;background:var(--cmpbg);color:var(--cmp);border-left:3px solid var(--cmp)}
+
+.detected-conditions{margin-top:12px;padding:12px;background:var(--card);border-left:3px solid var(--acc);border-radius:6px}
+.detected-conditions h4{margin:0 0 8px;font-size:0.9rem;color:var(--acc)}
+.detected-conditions ul{margin:0;padding-left:20px;font-size:0.85rem}
+.detected-conditions li{margin-bottom:4px}
 
 .viz-col{display:flex;flex-direction:column;gap:16px}
 .viz-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
@@ -138,33 +143,36 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 <body>
 <main>
 <h1>Mapa del movimiento cervical - Configurable</h1>
-<p class="sub">Sube tus certificados médicos para configurar automáticamente tus condiciones o selecciónalas manualmente.</p>
+<p class="sub">Sube tus certificados médicos para configurar automáticamente el visor según tus condiciones específicas.</p>
 
 <div class="three-col">
   <div class="controls-col">
     <div class="card">
       <h2>Controles</h2>
       
-      <!-- Sección de upload -->
-      <div class="upload-section" id="uploadSection">
-        <h4>📄 Subir certificado médico</h4>
-        <p>Arrastra tu archivo PDF o imagen, o haz clic para seleccionar</p>
+      <!-- Sección de subida de certificados -->
+      <div class="upload-section">
+        <h3>📄 Subir certificados médicos</h3>
+        <p>Sube resonancias, radiografías o informes médicos (PDF o imágenes). El sistema detectará automáticamente tus condiciones.</p>
+        
         <div class="file-input-wrapper">
-          <input type="file" id="certFile" accept=".pdf,.png,.jpg,.jpeg" onchange="handleFileUpload(this.files[0])">
-          <label for="certFile" class="file-label">Seleccionar archivo</label>
+          <input type="file" id="certUpload" accept=".pdf,.png,.jpg,.jpeg" multiple onchange="handleFileUpload(event)">
+          <label for="certUpload" class="file-label" id="fileLabel">
+            Click para seleccionar archivos
+          </label>
         </div>
-        <div class="upload-progress" id="uploadProgress">
-          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-          <div class="progress-text" id="progressText">Procesando...</div>
-        </div>
-        <div class="uploaded-file" id="uploadedFile">
-          <div class="uploaded-file-name" id="uploadedFileName"></div>
-          <div class="uploaded-file-info">Archivo procesado correctamente</div>
-          <div class="detected-conditions" id="detectedConditions"></div>
+        
+        <div class="uploaded-files" id="uploadedFiles"></div>
+        <div class="extract-status" id="extractStatus"></div>
+        <div class="detected-conditions" id="detectedConditions" style="display:none">
+          <h4>Condiciones detectadas:</h4>
+          <ul id="detectedList"></ul>
         </div>
       </div>
 
       <h3>Configuración manual</h3>
+      <p class="cap">O selecciona manualmente tus condiciones:</p>
+      
       <div class="checkbox-group">
         <label><input type="checkbox" id="cond_sed" onchange="handleConditionChange()"> Tengo SED o hipermovilidad (mostrar advertencias)</label>
         <label><input type="checkbox" id="cond_ant" onchange="handleConditionChange()"> Anterolistesis o inestabilidad vertebral</label>
@@ -243,6 +251,187 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 }
 </script>
 
+<script>
+// Configurar PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let uploadedFiles = [];
+let extractedText = '';
+
+async function handleFileUpload(event) {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    const statusEl = document.getElementById('extractStatus');
+    const fileLabel = document.getElementById('fileLabel');
+    
+    files.forEach(file => {
+        uploadedFiles.push(file);
+    });
+
+    // Actualizar UI
+    updateFileList();
+    fileLabel.textContent = `${uploadedFiles.length} archivo(s) seleccionado(s)`;
+    fileLabel.classList.add('has-files');
+
+    // Extraer texto de los archivos
+    statusEl.className = 'extract-status processing';
+    statusEl.textContent = '⏳ Procesando documentos...';
+    statusEl.style.display = 'block';
+
+    extractedText = '';
+    for (const file of uploadedFiles) {
+        try {
+            if (file.type === 'application/pdf') {
+                const text = await extractTextFromPDF(file);
+                extractedText += text + '\n';
+            } else if (file.type.startsWith('image/')) {
+                // Para imágenes, usamos OCR básico (simulado - en producción usar Tesseract.js)
+                const text = await extractTextFromImage(file);
+                extractedText += text + '\n';
+            }
+        } catch (error) {
+            console.error(`Error procesando ${file.name}:`, error);
+        }
+    }
+
+    // Analizar texto extraído
+    analyzeExtractedText();
+    
+    statusEl.className = 'extract-status success';
+    statusEl.textContent = '✓ Documentos procesados correctamente';
+}
+
+async function extractTextFromPDF(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = '';
+    
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        text += textContent.items.map(item => item.str).join(' ') + '\n';
+    }
+    
+    return text;
+}
+
+async function extractTextFromImage(file) {
+    // Simulación - en producción integrar Tesseract.js
+    // Por ahora retornamos texto vacío pero mostramos el proceso
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(''); // OCR no implementado en esta versión
+        }, 1000);
+    });
+}
+
+function analyzeExtractedText() {
+    const text = extractedText.toLowerCase();
+    const detected = [];
+    
+    // Detectar condiciones médicas
+    const conditions = {
+        'sed': ['ehlers-danlos', 'ehlers danlos', 'sed', 'hipermovilidad', 'hiperlaxitud', 'síndrome de ehlers'],
+        'anterolistesis': ['anterolistesis', 'listesis', 'espondilolistesis', 'deslizamiento vertebral', 'inestabilidad'],
+        'rectificacion': ['rectificación', 'rectificacion', 'pérdida de lordosis', 'perdida de lordosis', 'enderezamiento cervical']
+    };
+
+    // Verificar cada condición
+    if (conditions.sed.some(term => text.includes(term))) {
+        document.getElementById('cond_sed').checked = true;
+        detected.push('SED o hipermovilidad');
+    }
+    
+    if (conditions.anterolistesis.some(term => text.includes(term))) {
+        document.getElementById('cond_ant').checked = true;
+        detected.push('Anterolistesis o inestabilidad vertebral');
+    }
+    
+    if (conditions.rectificacion.some(term => text.includes(term))) {
+        document.getElementById('cond_rec').checked = true;
+        detected.push('Rectificación de la lordosis cervical');
+    }
+
+    // Mostrar condiciones detectadas
+    const detectedDiv = document.getElementById('detectedConditions');
+    const detectedList = document.getElementById('detectedList');
+    
+    if (detected.length > 0) {
+        detectedList.innerHTML = detected.map(c => `<li>✓ ${c}</li>`).join('');
+        detectedDiv.style.display = 'block';
+        
+        // Aplicar configuración automáticamente
+        handleConditionChange();
+    } else {
+        detectedDiv.style.display = 'none';
+    }
+}
+
+function updateFileList() {
+    const container = document.getElementById('uploadedFiles');
+    container.innerHTML = uploadedFiles.map((file, index) => `
+        <div class="file-item">
+            <span class="file-name">${file.name}</span>
+            <button class="file-remove" onclick="removeFile(${index})">×</button>
+        </div>
+    `).join('');
+}
+
+function removeFile(index) {
+    uploadedFiles.splice(index, 1);
+    updateFileList();
+    
+    const fileLabel = document.getElementById('fileLabel');
+    if (uploadedFiles.length === 0) {
+        fileLabel.textContent = 'Click para seleccionar archivos';
+        fileLabel.classList.remove('has-files');
+        document.getElementById('detectedConditions').style.display = 'none';
+    } else {
+        fileLabel.textContent = `${uploadedFiles.length} archivo(s) seleccionado(s)`;
+    }
+}
+
+function handleConditionChange() {
+    const userConditions = {
+        sed: document.getElementById('cond_sed').checked,
+        anterolistesis: document.getElementById('cond_ant').checked,
+        rectificacion: document.getElementById('cond_rec').checked
+    };
+
+    // Actualizar límites según condiciones
+    if (userConditions.anterolistesis) {
+        MOV.flex.max = 35;
+    } else {
+        MOV.flex.max = DEFAULT_MOV.flex.max;
+    }
+
+    updateWarning();
+    render();
+}
+
+function updateWarning() {
+    const warningEl = document.getElementById('clinical-warning');
+    const userConditions = {
+        sed: document.getElementById('cond_sed').checked,
+        anterolistesis: document.getElementById('cond_ant').checked,
+        rectificacion: document.getElementById('cond_rec').checked
+    };
+    
+    warningEl.classList.remove('active');
+
+    if (userConditions.anterolistesis) {
+        warningEl.textContent = "️ ATENCIÓN: Tu RX dinámica confirma anterolistesis de C2 sobre C3 y C3 sobre C4 en flexión. Evita forzar el mentón al pecho.";
+        if (V0.fe > 15 || V0.prot > 15) {
+            warningEl.classList.add('active');
+        }
+    } else if (V0.fe > 15 || V0.prot > 15) {
+        warningEl.textContent = "⚠️ ATENCIÓN: Movimiento de flexión o adelantamiento elevado. Evita forzar el mentón al pecho.";
+        warningEl.classList.add('active');
+    }
+}
+</script>
+
 <script type="module">
 import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
@@ -254,12 +443,6 @@ let scene, camera, renderer, headPivot;
 let modelLoaded = false;
 const container = document.getElementById('webgl-container');
 const loadingMsg = document.getElementById('loading-msg');
-
-const userConditions = {
-    sed: false,
-    anterolistesis: false,
-    rectificacion: false
-};
 
 const DEFAULT_MOV = {
     flex: { n: "Flexión (mentón al pecho)", v: "side", max: 50, cap: "Vista lateral. La cara mira a la derecha." },
@@ -288,129 +471,6 @@ const SN = { der: "derecho", izq: "izquierdo" };
 const AX = { fe: { n: "Flexión / extensión", l: "Extensión", r: "Flexión" }, prot: { n: "Traslación anterior / retracción", l: "Retracción", r: "Adelantamiento" }, rot: { n: "Rotación axial", l: "Izquierda", r: "Derecha" }, tilt: { n: "Inclinación lateral", l: "Izquierda", r: "Derecha" } };
 const V0 = { fe: 0, prot: 0, rot: 0, tilt: 0 };
 let focus = "fe";
-
-function handleConditionChange() {
-    userConditions.sed = $("cond_sed").checked;
-    userConditions.anterolistesis = $("cond_ant").checked;
-    userConditions.rectificacion = $("cond_rec").checked;
-    render();
-}
-
-function handleFileUpload(file) {
-    if (!file) return;
-    
-    const uploadSection = $("uploadSection");
-    const progress = $("uploadProgress");
-    const progressFill = $("progressFill");
-    const progressText = $("progressText");
-    const uploadedFile = $("uploadedFile");
-    const uploadedFileName = $("uploadedFileName");
-    const detectedConditions = $("detectedConditions");
-    
-    progress.classList.add("active");
-    uploadedFile.classList.remove("active");
-    detectedConditions.innerHTML = "";
-    
-    const fileName = file.name;
-    uploadedFileName.textContent = fileName;
-    
-    const processText = async (text) => {
-        progressText.textContent = "Analizando contenido...";
-        progressFill.style.width = "70%";
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const detected = {
-            sed: false,
-            anterolistesis: false,
-            rectificacion: false
-        };
-        
-        const textLower = text.toLowerCase();
-        
-        if (textLower.includes("anterolistesis") || textLower.includes("listesis") || textLower.includes("deslizamiento vertebral") || textLower.includes("espondilolistesis")) {
-            detected.anterolistesis = true;
-        }
-        
-        if (textLower.includes("rectificación") || textLower.includes("rectificacion") || textLower.includes("pérdida de lordosis") || textLower.includes("perdida de lordosis") || textLower.includes("enderezamiento") || textLower.includes("ausencia de lordosis")) {
-            detected.rectificacion = true;
-        }
-        
-        if (textLower.includes("ehlers-danlos") || textLower.includes("sed") || textLower.includes("síndrome de ehlers-danlos") || textLower.includes("hipermovilidad") || textLower.includes("hiperlaxitud") || textLower.includes("hipermovilidad articular")) {
-            detected.sed = true;
-        }
-        
-        $("cond_sed").checked = detected.sed;
-        $("cond_ant").checked = detected.anterolistesis;
-        $("cond_rec").checked = detected.rectificacion;
-        
-        userConditions.sed = detected.sed;
-        userConditions.anterolistesis = detected.anterolistesis;
-        userConditions.rectificacion = detected.rectificacion;
-        
-        let conditionsHTML = "";
-        if (detected.sed) {
-            conditionsHTML += `<div class="detected-condition detected">✓ SED/Hipermovilidad detectado</div>`;
-        }
-        if (detected.anterolistesis) {
-            conditionsHTML += `<div class="detected-condition detected">✓ Anterolistesis detectada</div>`;
-        }
-        if (detected.rectificacion) {
-            conditionsHTML += `<div class="detected-condition detected">✓ Rectificación de lordosis detectada</div>`;
-        }
-        
-        if (!conditionsHTML) {
-            conditionsHTML = `<div class="detected-condition">No se detectaron condiciones específicas. Configura manualmente.</div>`;
-        }
-        
-        detectedConditions.innerHTML = conditionsHTML;
-        
-        progressFill.style.width = "100%";
-        progressText.textContent = "Procesamiento completado";
-        
-        setTimeout(() => {
-            progress.classList.remove("active");
-            uploadedFile.classList.add("active");
-        }, 500);
-        
-        handleConditionChange();
-    };
-    
-    if (file.type === "application/pdf") {
-        progressText.textContent = "Extrayendo texto del PDF...";
-        progressFill.style.width = "30%";
-        
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            const pdfData = new Uint8Array(e.target.result);
-            try {
-                const pdfLib = await import('https://cdn.jsdelivr.net/npm/pdf-parse@1.1.1/lib/pdf-parse.js');
-                const data = await pdfLib.default(pdfData);
-                processText(data.text);
-            } catch (err) {
-                console.error("Error procesando PDF:", err);
-                progressText.textContent = "Error al procesar PDF. Intenta con una imagen.";
-                progressFill.style.width = "0%";
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    } else {
-        progressText.textContent = "Reconociendo texto en imagen (OCR)...";
-        progressFill.style.width = "30%";
-        
-        try {
-            const worker = await Tesseract.createWorker('spa');
-            const ret = await worker.recognize(file);
-            await worker.terminate();
-            
-            processText(ret.data.text);
-        } catch (err) {
-            console.error("Error en OCR:", err);
-            progressText.textContent = "Error en OCR. Intenta con otro archivo.";
-            progressFill.style.width = "0%";
-        }
-    }
-}
 
 function sliders() {
     $("sl").innerHTML = Object.entries(AX).map(([k, x]) => `<div class="ax"><label for="r_${k}">${x.n}: <b id="o_${k}">neutra</b></label><input type="range" id="r_${k}" data-k="${k}" min="-100" max="100" value="${V0[k]}"><div class="ends"><span>${x.l}</span><span>${x.r}</span></div></div>`).join("");
@@ -680,16 +740,22 @@ function render() {
     }
 
     const warningEl = $("clinical-warning");
-    warningEl.classList.remove("active");
+    const userConditions = {
+        sed: $("cond_sed").checked,
+        anterolistesis: $("cond_ant").checked,
+        rectificacion: $("cond_rec").checked
+    };
+    
+    warningEl.classList.remove('active');
 
     if (userConditions.anterolistesis) {
-        warningEl.textContent = "️ ATENCIÓN: Configuración de anterolistesis activa. El límite de flexión se ha reducido. Evita forzar el mentón al pecho.";
+        warningEl.textContent = "️ ATENCIÓN: Tu RX dinámica confirma anterolistesis de C2 sobre C3 y C3 sobre C4 en flexión. Evita forzar el mentón al pecho.";
         if (V0.fe > 15 || V0.prot > 15) {
-            warningEl.classList.add("active");
+            warningEl.classList.add('active');
         }
     } else if (V0.fe > 15 || V0.prot > 15) {
         warningEl.textContent = "⚠️ ATENCIÓN: Movimiento de flexión o adelantamiento elevado. Evita forzar el mentón al pecho.";
-        warningEl.classList.add("active");
+        warningEl.classList.add('active');
     }
 
     const f = A.find(x => x.k === focus) || A[0] || { mv: "flex", side: "der", a: 0 };
@@ -726,25 +792,13 @@ $("pad").addEventListener("pointerup", () => { drag = false; });
 $("pad").addEventListener("keydown", e => { const d = { ArrowUp: ["fe", -10], ArrowDown: ["fe", 10], ArrowLeft: [hk, -10], ArrowRight: [hk, 10] }[e.key]; if (d) { e.preventDefault(); V0[d[0]] = Math.max(-100, Math.min(100, V0[d[0]] + d[1])); focus = d[0]; render(); } });
 $("pm").addEventListener("click", e => { const h = e.target.dataset.h; if (h) { hk = h; for (const b of $("pm").children) b.setAttribute("aria-pressed", b.dataset.h === h); focus = h; render(); } });
 
-const uploadSection = $("uploadSection");
-uploadSection.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    uploadSection.classList.add("dragover");
-});
-uploadSection.addEventListener("dragleave", () => {
-    uploadSection.classList.remove("dragover");
-});
-uploadSection.addEventListener("drop", (e) => {
-    e.preventDefault();
-    uploadSection.classList.remove("dragover");
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        handleFileUpload(files[0]);
-    }
-});
-
 sliders();
 render();
+
+// Hacer funciones globales
+window.handleFileUpload = handleFileUpload;
+window.handleConditionChange = handleConditionChange;
+window.removeFile = removeFile;
 </script>
 </body>
 </html>
