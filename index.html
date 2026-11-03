@@ -55,7 +55,7 @@ h2{font-size:1.15rem;margin:20px 0 8px}
   .grid{grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.2fr);}
 }
 .sticky-viz {position: sticky;top: 0;z-index: 10;background: var(--bg);padding-top: 10px;}
-.fig-wrap{display:flex;gap:16px;align-items:stretch;width:100%;margin-bottom:16px;height: 460px; }
+.fig-wrap{display:flex;gap:16px;align-items:stretch;width:100%;margin-bottom:16px;height: 500px; }
 .fig-wrap > * {min-width:0;background: var(--bg);border-radius: 8px;overflow: hidden; position: relative;}
 #fig {flex: 1.6; width: 100%;height: 100%;object-fit: contain;}
 #webgl-container {flex: 0.9; display: flex;justify-content: center;align-items: center; min-height: 400px;}
@@ -78,7 +78,7 @@ h2{font-size:1.15rem;margin:20px 0 8px}
 }
 
 @media(max-width:760px){
-  .fig-wrap{flex-direction:column; height: 650px;}
+  .fig-wrap{flex-direction:column; height: 700px;}
   #fig { flex: 1; width:100%; aspect-ratio: auto;}
   #webgl-container { flex: 1; width:100%;}
   .bm{flex-direction:column;align-items:center}.bm svg{width:90px}
@@ -119,6 +119,94 @@ h2{font-size:1.15rem;margin:20px 0 8px}
     height: 18px;
     accent-color: var(--acc);
 }
+
+/* Sistema de pestañas */
+.tabs-container {
+    margin-top: 20px;
+}
+.tabs-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--line);
+    flex-wrap: wrap;
+}
+.tab-button {
+    background: var(--bg);
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 12px 20px;
+    font-weight: 700;
+    color: var(--mute);
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 8px 8px 0 0;
+}
+.tab-button:hover {
+    background: var(--card);
+    color: var(--ink);
+}
+.tab-button.active {
+    background: var(--card);
+    color: var(--acc);
+    border-bottom-color: var(--acc);
+}
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease-in;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Mejoras de visualización */
+.viz-large {
+    height: 600px !important;
+}
+.viz-large #fig {
+    flex: 2 !important;
+}
+.viz-large #webgl-container {
+    flex: 1.2 !important;
+}
+
+/* Panel de información mejorado */
+.info-panel {
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+.info-panel::-webkit-scrollbar {
+    width: 8px;
+}
+.info-panel::-webkit-scrollbar-track {
+    background: var(--bg);
+    border-radius: 4px;
+}
+.info-panel::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 4px;
+}
+.info-panel::-webkit-scrollbar-thumb:hover {
+    background: var(--acc);
+}
+
+/* Controles siempre visibles */
+.controls-fixed {
+    position: sticky;
+    bottom: 0;
+    background: var(--card);
+    border-top: 2px solid var(--line);
+    padding: 16px;
+    margin-top: 20px;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+    z-index: 100;
+}
 </style>
 </head>
 <body>
@@ -138,22 +226,51 @@ h2{font-size:1.15rem;margin:20px 0 8px}
         <p class="cap" style="margin-top:8px; margin-bottom:0;">Selecciona solo lo que aparezca explícitamente en tus informes. Esto ajustará los límites de movimiento del modelo de forma determinista.</p>
       </div>
 
-      <div class="fig-wrap">
-        <svg class="fig" id="fig" viewBox="0 0 320 380" role="img" aria-label="Esquema del cuello"></svg>
-        <div id="webgl-container" role="img" aria-label="Modelo 3D realista de la cabeza y cuello">
-            <div id="loading-msg">Cargando modelo 3D...</div>
-        </div>
-      </div>
-      <p class="cap" id="cap"></p>
-      
       <div id="clinical-warning" class="clinical-warning">
         ATENCION: Configuración de riesgo activa. Evita forzar el mentón al pecho.
       </div>
 
-      <div class="cap" id="pr" style="color:var(--ink)"></div>
+      <!-- Sistema de pestañas -->
+      <div class="tabs-container">
+        <div class="tabs-nav">
+          <button class="tab-button active" data-tab="visualizacion">📊 Visualización 3D</button>
+          <button class="tab-button" data-tab="analisis">📋 Análisis de Estructuras</button>
+          <button class="tab-button" data-tab="cuerpo">🧍 Otras Partes del Cuerpo</button>
+        </div>
+
+        <!-- Pestaña 1: Visualización -->
+        <div id="tab-visualizacion" class="tab-content active">
+          <div class="fig-wrap viz-large">
+            <svg class="fig" id="fig" viewBox="0 0 320 380" role="img" aria-label="Esquema del cuello"></svg>
+            <div id="webgl-container" role="img" aria-label="Modelo 3D realista de la cabeza y cuello">
+                <div id="loading-msg">Cargando modelo 3D...</div>
+            </div>
+          </div>
+          <p class="cap" id="cap"></p>
+          <div class="cap" id="pr" style="color:var(--ink)"></div>
+        </div>
+
+        <!-- Pestaña 2: Análisis de estructuras -->
+        <div id="tab-analisis" class="tab-content">
+          <div class="info-panel">
+            <h2>Estructuras del cuello</h2>
+            <section aria-live="polite"><div id="out"></div></section>
+          </div>
+        </div>
+
+        <!-- Pestaña 3: Otras partes del cuerpo -->
+        <div id="tab-cuerpo" class="tab-content">
+          <div class="info-panel">
+            <h2>Otras partes del cuerpo</h2>
+            <div class="card bm"><svg id="body" viewBox="0 0 120 300" role="img" aria-label="Silueta del cuerpo con las zonas que pueden responder"></svg><div id="bp"></div></div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <section class="card" aria-label="Controles de movimiento" style="margin-top: 18px;">
+    <!-- Controles siempre visibles -->
+    <section class="card controls-fixed" aria-label="Controles de movimiento">
       <div class="btns" id="pm"><button data-h="rot" aria-pressed="true">Izquierda/derecha: rotación</button><button data-h="tilt" aria-pressed="false">Izquierda/derecha: inclinación</button></div>
       <div id="pad" tabindex="0" role="group" aria-label="Control de dirección del cuello. Arrastra el punto o usa las flechas del teclado."><i id="dot"></i><b class="pl u">Extensión (arriba)</b><b class="pl d">Flexión (abajo)</b><b class="pl l">Izq.</b><b class="pl r">Der.</b></div>
       <p class="cap">Arrastra el punto hacia un lado, arriba, abajo o en diagonal. Los deslizadores de abajo se mueven contigo y sirven para ajustar con precisión. El movimiento diagonal combina ejes; no es una articulación adicional.</p>
@@ -162,13 +279,6 @@ h2{font-size:1.15rem;margin:20px 0 8px}
       <div class="lg"><span><i style="background:var(--vago)"></i>Trayecto aproximado del vago</span><span><i style="background:var(--art)"></i>Trayecto aproximado de la arteria vertebral</span><span><i style="background:#d8b84e"></i>Médula</span><span><i style="background:var(--acc)"></i>Músculo y raíces</span><span><i style="background:var(--bone)"></i>Hueso</span></div>
       <p class="cap">Los círculos numerados señalan carga o tensión (ámbar) y posible estrechamiento o compromiso teórico (rojo). No representan una compresión medida. El número coincide con la lista; la silueta punteada es la posición neutra.</p>
     </section>
-  </div>
-
-  <div>
-    <h2>Estructuras del cuello</h2>
-    <section aria-live="polite"><div id="out"></div></section>
-    <h2>Otras partes del cuerpo</h2>
-    <div class="card bm"><svg id="body" viewBox="0 0 120 300" role="img" aria-label="Silueta del cuerpo con las zonas que pueden responder"></svg><div id="bp"></div></div>
   </div>
 </div>
 
@@ -538,6 +648,27 @@ $("pad").addEventListener("pointermove",e=>{if(drag)padSet(e);});
 $("pad").addEventListener("pointerup",()=>{drag=false;});
 $("pad").addEventListener("keydown",e=>{const d={ArrowUp:["fe",-10],ArrowDown:["fe",10],ArrowLeft:[hk,-10],ArrowRight:[hk,10]}[e.key];if(d){e.preventDefault();V0[d[0]]=Math.max(-100,Math.min(100,V0[d[0]]+d[1]));focus=d[0];render();}});
 $("pm").addEventListener("click",e=>{const h=e.target.dataset.h;if(h){hk=h;for(const b of $("pm").children)b.setAttribute("aria-pressed",b.dataset.h===h);focus=h;render();}});
+
+// Sistema de pestañas
+document.querySelectorAll('.tab-button').forEach(button => {
+    button.addEventListener('click', () => {
+        const tabId = button.dataset.tab;
+        
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        button.classList.add('active');
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+        
+        if (tabId === 'visualizacion') {
+            setTimeout(() => {
+                if (renderer && container.clientWidth) {
+                    onWindowResize();
+                }
+            }, 100);
+        }
+    });
+});
 
 sliders();
 render();
