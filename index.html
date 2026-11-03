@@ -6,6 +6,7 @@
 <title>Mapa del movimiento cervical 3D - Configurable</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--ink:#1a2b34;--mute:#5a6b75;--line:#d1dce3;--acc:#0d7a84;--acc-light:#e8f4f5;--str:#b87400;--strbg:#fff4dc;--cmp:#c42a1f;--cmpbg:#fde8e6;--ok:#e8eef1;--vago:#7a3fb0;--art:#c2410c;--bone:#d9e2e6;--green:#2d8a4e;--green-bg:#e6f5ec;}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1a1f;--card:#16262d;--ink:#e6f0f3;--mute:#9db1b9;--line:#2b414a;--acc:#4fc3cc;--acc-light:#1a3a3d;--str:#f5b84a;--strbg:#3a2c0e;--cmp:#ff8a80;--cmpbg:#40201e;--ok:#1f333b;--vago:#c79bf0;--art:#ff9a62;--bone:#2b414a;--green:#4ade80;--green-bg:#0f2e1a}}
@@ -18,7 +19,7 @@ main{max-width:1600px;margin:0 auto;padding:20px}
 h1{font-size:1.5rem;margin:0 0 4px;line-height:1.2}
 .sub{color:var(--mute);margin:0 0 20px;max-width:60ch;font-size:0.95rem}
 
-.three-col{display:grid;grid-template-columns:340px 1fr 380px;gap:20px;align-items:start}
+.three-col{display:grid;grid-template-columns:360px 1fr 380px;gap:20px;align-items:start}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 .card h2{font-size:1.1rem;margin:0 0 12px;color:var(--ink)}
@@ -56,27 +57,27 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 
 .cap{font-size:0.85rem;color:var(--mute);margin:6px 0}
 
-/* Campos numéricos de certificado */
-.cert-fields{margin-top:16px}
-.cert-field{margin-bottom:12px}
-.cert-field label{display:block;font-size:0.85rem;font-weight:600;margin-bottom:4px;color:var(--ink)}
-.cert-field .field-hint{font-size:0.75rem;color:var(--mute);margin-bottom:4px;display:block}
-.cert-field input[type="number"]{width:100%;padding:8px 10px;border:2px solid var(--line);border-radius:6px;font:inherit;font-size:0.9rem;background:var(--bg);color:var(--ink);transition:border-color 0.2s}
-.cert-field input[type="number"]:focus{outline:none;border-color:var(--acc)}
-.cert-field input[type="number"]:invalid{border-color:var(--cmp)}
-.cert-field input[type="number"]:valid{border-color:var(--green)}
-
-.cert-actions{display:flex;gap:8px;margin-top:12px}
-.cert-actions button{flex:1;font:inherit;font-size:0.85rem;font-weight:600;padding:8px;border-radius:6px;cursor:pointer;transition:all 0.2s}
-.btn-apply{background:var(--acc);color:var(--card);border:2px solid var(--acc)}
-.btn-apply:hover{background:var(--acc-light);color:var(--ink);border-color:var(--acc)}
-.btn-reset{background:var(--bg);color:var(--ink);border:2px solid var(--line)}
-.btn-reset:hover{border-color:var(--mute)}
-
-.cert-status{margin-top:12px;padding:8px 12px;border-radius:6px;font-size:0.85rem;font-weight:600;display:none}
-.cert-status.active{display:block}
-.cert-status.custom{background:var(--acc-light);color:var(--acc);border-left:3px solid var(--acc)}
-.cert-status.default{background:var(--ok);color:var(--mute);border-left:3px solid var(--line)}
+/* Upload de certificados */
+.upload-section{margin:16px 0;padding:16px;background:var(--bg);border:2px dashed var(--line);border-radius:12px;text-align:center}
+.upload-section.dragover{border-color:var(--acc);background:var(--acc-light)}
+.upload-section h4{margin:0 0 8px;font-size:0.95rem;color:var(--ink)}
+.upload-section p{margin:0 0 12px;font-size:0.85rem;color:var(--mute)}
+.file-input-wrapper{position:relative;overflow:hidden;display:inline-block;width:100%}
+.file-input-wrapper input[type=file]{position:absolute;left:-9999px}
+.file-label{display:block;padding:12px;background:var(--card);border:2px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;color:var(--ink);transition:all 0.2s}
+.file-label:hover{border-color:var(--acc);background:var(--acc-light)}
+.upload-progress{margin-top:12px;display:none}
+.upload-progress.active{display:block}
+.progress-bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-bottom:8px}
+.progress-fill{height:100%;background:var(--acc);width:0%;transition:width 0.3s}
+.progress-text{font-size:0.85rem;color:var(--mute)}
+.uploaded-file{margin-top:12px;padding:12px;background:var(--card);border-left:4px solid var(--green);border-radius:6px;text-align:left;display:none}
+.uploaded-file.active{display:block}
+.uploaded-file-name{font-weight:600;font-size:0.9rem;margin-bottom:4px}
+.uploaded-file-info{font-size:0.85rem;color:var(--mute)}
+.detected-conditions{margin-top:12px}
+.detected-condition{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--ok);border-radius:6px;margin-bottom:6px;font-size:0.9rem}
+.detected-condition.detected{background:var(--acc-light);border-left:3px solid var(--acc)}
 
 .viz-col{display:flex;flex-direction:column;gap:16px}
 .viz-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
@@ -125,7 +126,7 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 .struct-desc b{color:var(--ink)}
 
 @media(max-width:1200px){
-  .three-col{grid-template-columns:300px 1fr 340px;gap:16px}
+  .three-col{grid-template-columns:320px 1fr 340px;gap:16px}
 }
 @media(max-width:1024px){
   .three-col{grid-template-columns:1fr;gap:20px}
@@ -137,56 +138,40 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 <body>
 <main>
 <h1>Mapa del movimiento cervical - Configurable</h1>
-<p class="sub">Selecciona tus condiciones médicas e ingresa los valores exactos de tu certificado para ajustar los límites de movimiento.</p>
+<p class="sub">Sube tus certificados médicos para configurar automáticamente tus condiciones o selecciónalas manualmente.</p>
 
 <div class="three-col">
   <div class="controls-col">
     <div class="card">
       <h2>Controles</h2>
       
+      <!-- Sección de upload -->
+      <div class="upload-section" id="uploadSection">
+        <h4>📄 Subir certificado médico</h4>
+        <p>Arrastra tu archivo PDF o imagen, o haz clic para seleccionar</p>
+        <div class="file-input-wrapper">
+          <input type="file" id="certFile" accept=".pdf,.png,.jpg,.jpeg" onchange="handleFileUpload(this.files[0])">
+          <label for="certFile" class="file-label">Seleccionar archivo</label>
+        </div>
+        <div class="upload-progress" id="uploadProgress">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-text" id="progressText">Procesando...</div>
+        </div>
+        <div class="uploaded-file" id="uploadedFile">
+          <div class="uploaded-file-name" id="uploadedFileName"></div>
+          <div class="uploaded-file-info">Archivo procesado correctamente</div>
+          <div class="detected-conditions" id="detectedConditions"></div>
+        </div>
+      </div>
+
+      <h3>Configuración manual</h3>
       <div class="checkbox-group">
         <label><input type="checkbox" id="cond_sed" onchange="handleConditionChange()"> Tengo SED o hipermovilidad (mostrar advertencias)</label>
         <label><input type="checkbox" id="cond_ant" onchange="handleConditionChange()"> Anterolistesis o inestabilidad vertebral</label>
         <label><input type="checkbox" id="cond_rec" onchange="handleConditionChange()"> Rectificación de la lordosis cervical</label>
       </div>
 
-      <h3>Valores de tu certificado</h3>
-      <p class="cap">Ingresa los rangos máximos de movimiento según tu informe médico. Deja en blanco para usar valores por defecto.</p>
-      
-      <div class="cert-fields">
-        <div class="cert-field">
-          <label for="cert_flex">Flexión máxima (grados)</label>
-          <span class="field-hint">Rango normal: 45-50°</span>
-          <input type="number" id="cert_flex" min="0" max="90" step="1" placeholder="50">
-        </div>
-        
-        <div class="cert-field">
-          <label for="cert_ext">Extensión máxima (grados)</label>
-          <span class="field-hint">Rango normal: 45-50°</span>
-          <input type="number" id="cert_ext" min="0" max="90" step="1" placeholder="50">
-        </div>
-        
-        <div class="cert-field">
-          <label for="cert_rot">Rotación máxima (grados)</label>
-          <span class="field-hint">Rango normal: 70-80°</span>
-          <input type="number" id="cert_rot" min="0" max="120" step="1" placeholder="80">
-        </div>
-        
-        <div class="cert-field">
-          <label for="cert_tilt">Inclinación lateral máxima (grados)</label>
-          <span class="field-hint">Rango normal: 35-45°</span>
-          <input type="number" id="cert_tilt" min="0" max="90" step="1" placeholder="40">
-        </div>
-      </div>
-
-      <div class="cert-actions">
-        <button class="btn-apply" id="applyCert">Aplicar valores</button>
-        <button class="btn-reset" id="resetCert">Usar defaults</button>
-      </div>
-
-      <div id="certStatus" class="cert-status"></div>
-
-      <div class="btn-group" id="pm" style="margin-top:16px">
+      <div class="btn-group" id="pm">
         <button data-h="rot" aria-pressed="true">Rotación</button>
         <button data-h="tilt" aria-pressed="false">Inclinación</button>
       </div>
@@ -303,59 +288,127 @@ const SN = { der: "derecho", izq: "izquierdo" };
 const AX = { fe: { n: "Flexión / extensión", l: "Extensión", r: "Flexión" }, prot: { n: "Traslación anterior / retracción", l: "Retracción", r: "Adelantamiento" }, rot: { n: "Rotación axial", l: "Izquierda", r: "Derecha" }, tilt: { n: "Inclinación lateral", l: "Izquierda", r: "Derecha" } };
 const V0 = { fe: 0, prot: 0, rot: 0, tilt: 0 };
 let focus = "fe";
-let certApplied = false;
 
 function handleConditionChange() {
     userConditions.sed = $("cond_sed").checked;
     userConditions.anterolistesis = $("cond_ant").checked;
     userConditions.rectificacion = $("cond_rec").checked;
-
-    applyCertValues();
     render();
 }
 
-function applyCertValues() {
-    const flexVal = parseFloat($("cert_flex").value);
-    const extVal = parseFloat($("cert_ext").value);
-    const rotVal = parseFloat($("cert_rot").value);
-    const tiltVal = parseFloat($("cert_tilt").value);
-
-    MOV.flex.max = (!isNaN(flexVal) && flexVal > 0) ? flexVal : DEFAULT_MOV.flex.max;
-    MOV.ext.max = (!isNaN(extVal) && extVal > 0) ? extVal : DEFAULT_MOV.ext.max;
-    MOV.rot.max = (!isNaN(rotVal) && rotVal > 0) ? rotVal : DEFAULT_MOV.rot.max;
-    MOV.tilt.max = (!isNaN(tiltVal) && tiltVal > 0) ? tiltVal : DEFAULT_MOV.tilt.max;
-
-    if (userConditions.anterolistesis && MOV.flex.max > 35) {
-        MOV.flex.max = 35;
-    }
-
-    const hasCustomValues = !isNaN(flexVal) || !isNaN(extVal) || !isNaN(rotVal) || !isNaN(tiltVal);
-    certApplied = hasCustomValues;
-
-    const statusEl = $("certStatus");
-    if (hasCustomValues) {
-        statusEl.textContent = `✓ Valores personalizados aplicados: Flexión ${MOV.flex.max}°, Extensión ${MOV.ext.max}°, Rotación ${MOV.rot.max}°, Inclinación ${MOV.tilt.max}°`;
-        statusEl.className = "cert-status active custom";
-    } else {
-        statusEl.textContent = "Usando valores por defecto";
-        statusEl.className = "cert-status active default";
-    }
-
-    updateWarning();
-}
-
-function updateWarning() {
-    const warningEl = $("clinical-warning");
-    warningEl.classList.remove("active");
-
-    if (userConditions.anterolistesis) {
-        warningEl.textContent = "⚠️ ATENCIÓN: Tu RX dinámica confirma anterolistesis de C2 sobre C3 y C3 sobre C4 en flexión. Evita forzar el mentón al pecho.";
-        if (V0.fe > 15 || V0.prot > 15) {
-            warningEl.classList.add("active");
+function handleFileUpload(file) {
+    if (!file) return;
+    
+    const uploadSection = $("uploadSection");
+    const progress = $("uploadProgress");
+    const progressFill = $("progressFill");
+    const progressText = $("progressText");
+    const uploadedFile = $("uploadedFile");
+    const uploadedFileName = $("uploadedFileName");
+    const detectedConditions = $("detectedConditions");
+    
+    progress.classList.add("active");
+    uploadedFile.classList.remove("active");
+    detectedConditions.innerHTML = "";
+    
+    const fileName = file.name;
+    uploadedFileName.textContent = fileName;
+    
+    const processText = async (text) => {
+        progressText.textContent = "Analizando contenido...";
+        progressFill.style.width = "70%";
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const detected = {
+            sed: false,
+            anterolistesis: false,
+            rectificacion: false
+        };
+        
+        const textLower = text.toLowerCase();
+        
+        if (textLower.includes("anterolistesis") || textLower.includes("listesis") || textLower.includes("deslizamiento vertebral") || textLower.includes("espondilolistesis")) {
+            detected.anterolistesis = true;
         }
-    } else if (V0.fe > 15 || V0.prot > 15) {
-        warningEl.textContent = "⚠️ ATENCIÓN: Movimiento de flexión o adelantamiento elevado. Evita forzar el mentón al pecho.";
-        warningEl.classList.add("active");
+        
+        if (textLower.includes("rectificación") || textLower.includes("rectificacion") || textLower.includes("pérdida de lordosis") || textLower.includes("perdida de lordosis") || textLower.includes("enderezamiento") || textLower.includes("ausencia de lordosis")) {
+            detected.rectificacion = true;
+        }
+        
+        if (textLower.includes("ehlers-danlos") || textLower.includes("sed") || textLower.includes("síndrome de ehlers-danlos") || textLower.includes("hipermovilidad") || textLower.includes("hiperlaxitud") || textLower.includes("hipermovilidad articular")) {
+            detected.sed = true;
+        }
+        
+        $("cond_sed").checked = detected.sed;
+        $("cond_ant").checked = detected.anterolistesis;
+        $("cond_rec").checked = detected.rectificacion;
+        
+        userConditions.sed = detected.sed;
+        userConditions.anterolistesis = detected.anterolistesis;
+        userConditions.rectificacion = detected.rectificacion;
+        
+        let conditionsHTML = "";
+        if (detected.sed) {
+            conditionsHTML += `<div class="detected-condition detected">✓ SED/Hipermovilidad detectado</div>`;
+        }
+        if (detected.anterolistesis) {
+            conditionsHTML += `<div class="detected-condition detected">✓ Anterolistesis detectada</div>`;
+        }
+        if (detected.rectificacion) {
+            conditionsHTML += `<div class="detected-condition detected">✓ Rectificación de lordosis detectada</div>`;
+        }
+        
+        if (!conditionsHTML) {
+            conditionsHTML = `<div class="detected-condition">No se detectaron condiciones específicas. Configura manualmente.</div>`;
+        }
+        
+        detectedConditions.innerHTML = conditionsHTML;
+        
+        progressFill.style.width = "100%";
+        progressText.textContent = "Procesamiento completado";
+        
+        setTimeout(() => {
+            progress.classList.remove("active");
+            uploadedFile.classList.add("active");
+        }, 500);
+        
+        handleConditionChange();
+    };
+    
+    if (file.type === "application/pdf") {
+        progressText.textContent = "Extrayendo texto del PDF...";
+        progressFill.style.width = "30%";
+        
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const pdfData = new Uint8Array(e.target.result);
+            try {
+                const pdfLib = await import('https://cdn.jsdelivr.net/npm/pdf-parse@1.1.1/lib/pdf-parse.js');
+                const data = await pdfLib.default(pdfData);
+                processText(data.text);
+            } catch (err) {
+                console.error("Error procesando PDF:", err);
+                progressText.textContent = "Error al procesar PDF. Intenta con una imagen.";
+                progressFill.style.width = "0%";
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        progressText.textContent = "Reconociendo texto en imagen (OCR)...";
+        progressFill.style.width = "30%";
+        
+        try {
+            const worker = await Tesseract.createWorker('spa');
+            const ret = await worker.recognize(file);
+            await worker.terminate();
+            
+            processText(ret.data.text);
+        } catch (err) {
+            console.error("Error en OCR:", err);
+            progressText.textContent = "Error en OCR. Intenta con otro archivo.";
+            progressFill.style.width = "0%";
+        }
     }
 }
 
@@ -626,7 +679,18 @@ function render() {
         }
     }
 
-    updateWarning();
+    const warningEl = $("clinical-warning");
+    warningEl.classList.remove("active");
+
+    if (userConditions.anterolistesis) {
+        warningEl.textContent = "️ ATENCIÓN: Configuración de anterolistesis activa. El límite de flexión se ha reducido. Evita forzar el mentón al pecho.";
+        if (V0.fe > 15 || V0.prot > 15) {
+            warningEl.classList.add("active");
+        }
+    } else if (V0.fe > 15 || V0.prot > 15) {
+        warningEl.textContent = "⚠️ ATENCIÓN: Movimiento de flexión o adelantamiento elevado. Evita forzar el mentón al pecho.";
+        warningEl.classList.add("active");
+    }
 
     const f = A.find(x => x.k === focus) || A[0] || { mv: "flex", side: "der", a: 0 };
     mv = f.mv; side = f.side;
@@ -662,30 +726,24 @@ $("pad").addEventListener("pointerup", () => { drag = false; });
 $("pad").addEventListener("keydown", e => { const d = { ArrowUp: ["fe", -10], ArrowDown: ["fe", 10], ArrowLeft: [hk, -10], ArrowRight: [hk, 10] }[e.key]; if (d) { e.preventDefault(); V0[d[0]] = Math.max(-100, Math.min(100, V0[d[0]] + d[1])); focus = d[0]; render(); } });
 $("pm").addEventListener("click", e => { const h = e.target.dataset.h; if (h) { hk = h; for (const b of $("pm").children) b.setAttribute("aria-pressed", b.dataset.h === h); focus = h; render(); } });
 
-$("applyCert").addEventListener("click", () => {
-    applyCertValues();
-    render();
+const uploadSection = $("uploadSection");
+uploadSection.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    uploadSection.classList.add("dragover");
 });
-
-$("resetCert").addEventListener("click", () => {
-    $("cert_flex").value = "";
-    $("cert_ext").value = "";
-    $("cert_rot").value = "";
-    $("cert_tilt").value = "";
-    MOV.flex.max = DEFAULT_MOV.flex.max;
-    MOV.ext.max = DEFAULT_MOV.ext.max;
-    MOV.rot.max = DEFAULT_MOV.rot.max;
-    MOV.tilt.max = DEFAULT_MOV.tilt.max;
-    certApplied = false;
-    const statusEl = $("certStatus");
-    statusEl.textContent = "Usando valores por defecto";
-    statusEl.className = "cert-status active default";
-    updateWarning();
-    render();
+uploadSection.addEventListener("dragleave", () => {
+    uploadSection.classList.remove("dragover");
+});
+uploadSection.addEventListener("drop", (e) => {
+    e.preventDefault();
+    uploadSection.classList.remove("dragover");
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFileUpload(files[0]);
+    }
 });
 
 sliders();
-applyCertValues();
 render();
 </script>
 </body>
