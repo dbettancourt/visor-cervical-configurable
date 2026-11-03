@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--ink:#1a2b34;--mute:#5a6b75;--line:#d1dce3;--acc:#0d7a84;--acc-light:#e8f4f5;--str:#b87400;--strbg:#fff4dc;--cmp:#c42a1f;--cmpbg:#fde8e6;--ok:#e8eef1;--vago:#7a3fb0;--art:#c2410c;--bone:#d9e2e6;--green:#2d8a4e;--green-bg:#e6f5ec;}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1a1f;--card:#16262d;--ink:#e6f0f3;--mute:#9db1b9;--line:#2b414a;--acc:#4fc3cc;--acc-light:#1a3a3d;--str:#f5b84a;--strbg:#3a2c0e;--cmp:#ff8a80;--cmpbg:#40201e;--ok:#1f333b;--vago:#c79bf0;--art:#ff9a62;--bone:#2b414a;--green:#4ade80;--green-bg:#0f2e1a}}
@@ -279,6 +280,7 @@ async function handleFileUpload(event) {
     let processedCount = 0;
     let errorCount = 0;
     let imageCount = 0;
+    let ocrCount = 0;
 
     try {
         for (const file of uploadedFiles) {
@@ -289,11 +291,11 @@ async function handleFileUpload(event) {
                         extractedText += text + '\n';
                         processedCount++;
                     } else {
-                        errorCount++;
+                        console.log('PDF sin texto detectado, intentando OCR...');
+                        imageCount++;
                     }
                 } else if (file.type.startsWith('image/')) {
                     imageCount++;
-                    processedCount++;
                 }
             } catch (error) {
                 console.error('Error procesando ' + file.name + ':', error);
@@ -302,23 +304,45 @@ async function handleFileUpload(event) {
         }
 
         if (imageCount > 0) {
-            setStatus('warning', '⚠️ Se detectaron ' + imageCount + ' imagen(es). El OCR básico no está implementado. Por favor, usa configuración manual o sube PDFs con texto seleccionable.');
+            setStatus('processing', '⏳ Realizando OCR en ' + imageCount + ' imagen(es)/PDF escaneado(s)... Esto puede tardar unos segundos.');
+            
+            try {
+                for (const file of uploadedFiles) {
+                    if (file.type.startsWith('image/') || (file.type === 'application/pdf' && !extractedText.includes(file.name))) {
+                        const ocrText = await performOCR(file);
+                        if (ocrText && ocrText.trim().length > 0) {
+                            extractedText += ocrText + '\n';
+                            ocrCount++;
+                        }
+                    }
+                }
+                
+                if (ocrCount > 0) {
+                    setStatus('success', '✓ OCR completado. Se procesaron ' + ocrCount + ' imagen(es).');
+                } else {
+                    setStatus('warning', '⚠️ OCR no produjo resultados útiles. Usa configuración manual.');
+                }
+            } catch (ocrError) {
+                console.error('Error en OCR:', ocrError);
+                setStatus('warning', '⚠️ Error en OCR: ' + ocrError.message + '. Usa configuración manual.');
+            }
+        }
+
+        if (errorCount === uploadedFiles.length && extractedText.trim().length === 0) {
+            setStatus('error', '❌ No se pudo procesar ningún archivo. Usa configuración manual.');
+            return;
+        }
+
+        if (extractedText.trim().length > 0) {
             analyzeExtractedText();
-            return;
-        }
-
-        if (errorCount === uploadedFiles.length) {
-            setStatus('error', '❌ No se pudo extraer texto de los archivos. Los PDFs pueden ser escaneados. Usa configuración manual.');
-            return;
-        }
-
-        if (extractedText.trim().length === 0) {
+            if (document.getElementById('detectedConditions').style.display === 'none') {
+                setStatus('warning', '⚠️ No se detectaron condiciones específicas en el texto. Verifica manualmente.');
+            } else {
+                setStatus('success', '✓ Documentos procesados. Condiciones detectadas y aplicadas.');
+            }
+        } else if (imageCount === 0) {
             setStatus('warning', '⚠️ No se detectó texto en los archivos. Los PDFs pueden ser escaneados. Usa configuración manual.');
-            return;
         }
-
-        analyzeExtractedText();
-        setStatus('success', '✓ Documentos procesados. Se detectaron condiciones médicas.');
 
     } catch (error) {
         console.error('Error general:', error);
@@ -342,6 +366,40 @@ async function extractTextFromPDF(file) {
         return text;
     } catch (error) {
         console.error('Error extrayendo texto del PDF:', error);
+        throw error;
+    }
+}
+
+async function performOCR(file) {
+    try {
+        let imageBlob;
+        
+        if (file.type === 'application/pdf') {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 2.0 });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        } else {
+            imageBlob = file;
+        }
+        
+        const result = await Tesseract.recognize(imageBlob, 'spa', {
+            logger: m => {
+                if (m.status === 'recognizing text') {
+                    console.log('OCR progreso:', Math.round(m.progress * 100) + '%');
+                }
+            }
+        });
+        
+        return result.data.text;
+    } catch (error) {
+        console.error('Error en OCR:', error);
         throw error;
     }
 }
@@ -411,6 +469,11 @@ function removeFile(index) {
 }
 
 function handleConditionChange() {
+    if (typeof window.MOV === 'undefined' || typeof window.DEFAULT_MOV === 'undefined') {
+        console.error('MOV o DEFAULT_MOV no están definidos');
+        return;
+    }
+    
     const userConditions = {
         sed: document.getElementById('cond_sed').checked,
         anterolistesis: document.getElementById('cond_ant').checked,
@@ -418,13 +481,15 @@ function handleConditionChange() {
     };
 
     if (userConditions.anterolistesis) {
-        MOV.flex.max = 35;
+        window.MOV.flex.max = 35;
     } else {
-        MOV.flex.max = DEFAULT_MOV.flex.max;
+        window.MOV.flex.max = window.DEFAULT_MOV.flex.max;
     }
 
     updateWarning();
-    render();
+    if (typeof window.render === 'function') {
+        window.render();
+    }
 }
 
 function updateWarning() {
@@ -439,10 +504,10 @@ function updateWarning() {
 
     if (userConditions.anterolistesis) {
         warningEl.textContent = '⚠️ ATENCIÓN: Tu RX dinámica confirma anterolistesis de C2 sobre C3 y C3 sobre C4 en flexión. Evita forzar el mentón al pecho.';
-        if (V0.fe > 15 || V0.prot > 15) {
+        if (window.V0 && (window.V0.fe > 15 || window.V0.prot > 15)) {
             warningEl.classList.add('active');
         }
-    } else if (V0.fe > 15 || V0.prot > 15) {
+    } else if (window.V0 && (window.V0.fe > 15 || window.V0.prot > 15)) {
         warningEl.textContent = '⚠️ ATENCIÓN: Movimiento de flexión o adelantamiento elevado. Evita forzar el mentón al pecho.';
         warningEl.classList.add('active');
     }
@@ -627,6 +692,7 @@ function poseSummary() {
 }
 
 function init3D() {
+    console.log('Iniciando Three.js...');
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf5f7fa);
 
@@ -668,6 +734,7 @@ function init3D() {
     console.log("Cargando modelo desde:", modelUrl);
 
     loader.load(modelUrl, (object) => {
+        console.log('Modelo cargado exitosamente');
         if (loadingMsg) loadingMsg.style.display = 'none';
 
         const boxInit = new THREE.Box3().setFromObject(object);
