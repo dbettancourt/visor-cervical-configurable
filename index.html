@@ -17,7 +17,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 "Atkinson Hype
 main{max-width:1400px;margin:0 auto;padding:20px 24px 40px}
 h1{font-size:1.7rem;margin:0 0 4px;line-height:1.2}
 .sub{color:var(--mute);margin:0 0 18px;max-width:60ch}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
 .btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 button{font:inherit;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
 button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:var(--card);font-weight:700}
@@ -52,13 +52,21 @@ h2{font-size:1.15rem;margin:20px 0 8px}
 
 .grid{display:grid;grid-template-columns: 1fr;gap:24px;align-items:start}
 @media(min-width:900px){
-  .grid{grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.2fr);}
+  .grid{grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);}
 }
-.sticky-viz {position: sticky;top: 0;z-index: 10;background: var(--bg);padding-top: 10px;}
-.fig-wrap{display:flex;gap:16px;align-items:stretch;width:100%;margin-bottom:16px;height: 500px; }
+
+/* Visualización principal - SIEMPRE VISIBLE */
+.viz-section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.fig-wrap{display:flex;gap:16px;align-items:stretch;width:100%;height: 500px; }
 .fig-wrap > * {min-width:0;background: var(--bg);border-radius: 8px;overflow: hidden; position: relative;}
-#fig {flex: 1.6; width: 100%;height: 100%;object-fit: contain;}
-#webgl-container {flex: 0.9; display: flex;justify-content: center;align-items: center; min-height: 400px;}
+#fig {flex: 1.5; width: 100%;height: 100%;object-fit: contain;}
+#webgl-container {flex: 1; display: flex;justify-content: center;align-items: center; min-height: 400px;}
 
 #webgl-container canvas {
     position: absolute;
@@ -120,7 +128,7 @@ h2{font-size:1.15rem;margin:20px 0 8px}
     accent-color: var(--acc);
 }
 
-/* Sistema de pestañas */
+/* Pestañas para información adicional */
 .tabs-container {
     margin-top: 20px;
 }
@@ -163,20 +171,8 @@ h2{font-size:1.15rem;margin:20px 0 8px}
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Mejoras de visualización */
-.viz-large {
-    height: 600px !important;
-}
-.viz-large #fig {
-    flex: 2 !important;
-}
-.viz-large #webgl-container {
-    flex: 1.2 !important;
-}
-
-/* Panel de información mejorado */
 .info-panel {
-    max-height: 600px;
+    max-height: 500px;
     overflow-y: auto;
     padding-right: 10px;
 }
@@ -194,19 +190,6 @@ h2{font-size:1.15rem;margin:20px 0 8px}
 .info-panel::-webkit-scrollbar-thumb:hover {
     background: var(--acc);
 }
-
-/* Controles siempre visibles */
-.controls-fixed {
-    position: sticky;
-    bottom: 0;
-    background: var(--card);
-    border-top: 2px solid var(--line);
-    padding: 16px;
-    margin-top: 20px;
-    border-radius: 12px 12px 0 0;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-    z-index: 100;
-}
 </style>
 </head>
 <body>
@@ -216,61 +199,33 @@ h2{font-size:1.15rem;margin:20px 0 8px}
 
 <div class="grid">
   <div>
-    <div class="card sticky-viz">
-      
-      <div class="card config-section">
-        <label style="font-weight:700; margin-bottom:12px; display:block;">Configurar según tu informe médico:</label>
-        <label><input type="checkbox" id="cond_sed" onchange="handleConditionChange()"> Tengo diagnóstico de SED o hipermovilidad</label>
-        <label><input type="checkbox" id="cond_ant" onchange="handleConditionChange()"> Anterolistesis o inestabilidad vertebral (ej. C2-C4)</label>
-        <label><input type="checkbox" id="cond_rec" onchange="handleConditionChange()"> Rectificación de la lordosis cervical</label>
-        <p class="cap" style="margin-top:8px; margin-bottom:0;">Selecciona solo lo que aparezca explícitamente en tus informes. Esto ajustará los límites de movimiento del modelo de forma determinista.</p>
-      </div>
+    <!-- SECCIÓN DE CONFIGURACIÓN -->
+    <div class="card config-section">
+      <label style="font-weight:700; margin-bottom:12px; display:block;">Configurar según tu informe médico:</label>
+      <label><input type="checkbox" id="cond_sed" onchange="handleConditionChange()"> Tengo diagnóstico de SED o hipermovilidad</label>
+      <label><input type="checkbox" id="cond_ant" onchange="handleConditionChange()"> Anterolistesis o inestabilidad vertebral (ej. C2-C4)</label>
+      <label><input type="checkbox" id="cond_rec" onchange="handleConditionChange()"> Rectificación de la lordosis cervical</label>
+      <p class="cap" style="margin-top:8px; margin-bottom:0;">Selecciona solo lo que aparezca explícitamente en tus informes. Esto ajustará los límites de movimiento del modelo de forma determinista.</p>
+    </div>
 
+    <!-- SECCIÓN DE VISUALIZACIÓN - SIEMPRE VISIBLE -->
+    <div class="viz-section">
       <div id="clinical-warning" class="clinical-warning">
         ATENCION: Configuración de riesgo activa. Evita forzar el mentón al pecho.
       </div>
 
-      <!-- Sistema de pestañas -->
-      <div class="tabs-container">
-        <div class="tabs-nav">
-          <button class="tab-button active" data-tab="visualizacion">📊 Visualización 3D</button>
-          <button class="tab-button" data-tab="analisis">📋 Análisis de Estructuras</button>
-          <button class="tab-button" data-tab="cuerpo">🧍 Otras Partes del Cuerpo</button>
-        </div>
-
-        <!-- Pestaña 1: Visualización -->
-        <div id="tab-visualizacion" class="tab-content active">
-          <div class="fig-wrap viz-large">
-            <svg class="fig" id="fig" viewBox="0 0 320 380" role="img" aria-label="Esquema del cuello"></svg>
-            <div id="webgl-container" role="img" aria-label="Modelo 3D realista de la cabeza y cuello">
-                <div id="loading-msg">Cargando modelo 3D...</div>
-            </div>
-          </div>
-          <p class="cap" id="cap"></p>
-          <div class="cap" id="pr" style="color:var(--ink)"></div>
-        </div>
-
-        <!-- Pestaña 2: Análisis de estructuras -->
-        <div id="tab-analisis" class="tab-content">
-          <div class="info-panel">
-            <h2>Estructuras del cuello</h2>
-            <section aria-live="polite"><div id="out"></div></section>
-          </div>
-        </div>
-
-        <!-- Pestaña 3: Otras partes del cuerpo -->
-        <div id="tab-cuerpo" class="tab-content">
-          <div class="info-panel">
-            <h2>Otras partes del cuerpo</h2>
-            <div class="card bm"><svg id="body" viewBox="0 0 120 300" role="img" aria-label="Silueta del cuerpo con las zonas que pueden responder"></svg><div id="bp"></div></div>
-          </div>
+      <div class="fig-wrap">
+        <svg class="fig" id="fig" viewBox="0 0 320 380" role="img" aria-label="Esquema del cuello"></svg>
+        <div id="webgl-container" role="img" aria-label="Modelo 3D realista de la cabeza y cuello">
+            <div id="loading-msg">Cargando modelo 3D...</div>
         </div>
       </div>
-
+      <p class="cap" id="cap"></p>
+      <div class="cap" id="pr" style="color:var(--ink)"></div>
     </div>
 
-    <!-- Controles siempre visibles -->
-    <section class="card controls-fixed" aria-label="Controles de movimiento">
+    <!-- SECCIÓN DE CONTROLES -->
+    <div class="card">
       <div class="btns" id="pm"><button data-h="rot" aria-pressed="true">Izquierda/derecha: rotación</button><button data-h="tilt" aria-pressed="false">Izquierda/derecha: inclinación</button></div>
       <div id="pad" tabindex="0" role="group" aria-label="Control de dirección del cuello. Arrastra el punto o usa las flechas del teclado."><i id="dot"></i><b class="pl u">Extensión (arriba)</b><b class="pl d">Flexión (abajo)</b><b class="pl l">Izq.</b><b class="pl r">Der.</b></div>
       <p class="cap">Arrastra el punto hacia un lado, arriba, abajo o en diagonal. Los deslizadores de abajo se mueven contigo y sirven para ajustar con precisión. El movimiento diagonal combina ejes; no es una articulación adicional.</p>
@@ -278,7 +233,31 @@ h2{font-size:1.15rem;margin:20px 0 8px}
       <p class="cap" id="deg"></p><p class="cap" id="pose" aria-live="polite"></p><p class="cap">Movimientos incluidos: flexión, extensión, rotación axial, inclinación lateral y traslación anterior/retracción. Las diagonales son combinaciones de esos ejes.</p>
       <div class="lg"><span><i style="background:var(--vago)"></i>Trayecto aproximado del vago</span><span><i style="background:var(--art)"></i>Trayecto aproximado de la arteria vertebral</span><span><i style="background:#d8b84e"></i>Médula</span><span><i style="background:var(--acc)"></i>Músculo y raíces</span><span><i style="background:var(--bone)"></i>Hueso</span></div>
       <p class="cap">Los círculos numerados señalan carga o tensión (ámbar) y posible estrechamiento o compromiso teórico (rojo). No representan una compresión medida. El número coincide con la lista; la silueta punteada es la posición neutra.</p>
-    </section>
+    </div>
+  </div>
+
+  <!-- COLUMNA DERECHA: INFORMACIÓN ADICIONAL CON PESTAÑAS -->
+  <div>
+    <div class="tabs-container">
+      <div class="tabs-nav">
+        <button class="tab-button active" data-tab="estructuras">Estructuras del cuello</button>
+        <button class="tab-button" data-tab="cuerpo">Otras partes del cuerpo</button>
+      </div>
+
+      <div id="tab-estructuras" class="tab-content active">
+        <div class="info-panel">
+          <h2>Estructuras del cuello</h2>
+          <section aria-live="polite"><div id="out"></div></section>
+        </div>
+      </div>
+
+      <div id="tab-cuerpo" class="tab-content">
+        <div class="info-panel">
+          <h2>Otras partes del cuerpo</h2>
+          <div class="card bm"><svg id="body" viewBox="0 0 120 300" role="img" aria-label="Silueta del cuerpo con las zonas que pueden responder"></svg><div id="bp"></div></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -649,7 +628,7 @@ $("pad").addEventListener("pointerup",()=>{drag=false;});
 $("pad").addEventListener("keydown",e=>{const d={ArrowUp:["fe",-10],ArrowDown:["fe",10],ArrowLeft:[hk,-10],ArrowRight:[hk,10]}[e.key];if(d){e.preventDefault();V0[d[0]]=Math.max(-100,Math.min(100,V0[d[0]]+d[1]));focus=d[0];render();}});
 $("pm").addEventListener("click",e=>{const h=e.target.dataset.h;if(h){hk=h;for(const b of $("pm").children)b.setAttribute("aria-pressed",b.dataset.h===h);focus=h;render();}});
 
-// Sistema de pestañas
+// Sistema de pestañas para información adicional
 document.querySelectorAll('.tab-button').forEach(button => {
     button.addEventListener('click', () => {
         const tabId = button.dataset.tab;
@@ -659,14 +638,6 @@ document.querySelectorAll('.tab-button').forEach(button => {
         
         button.classList.add('active');
         document.getElementById(`tab-${tabId}`).classList.add('active');
-        
-        if (tabId === 'visualizacion') {
-            setTimeout(() => {
-                if (renderer && container.clientWidth) {
-                    onWindowResize();
-                }
-            }, 100);
-        }
     });
 });
 
