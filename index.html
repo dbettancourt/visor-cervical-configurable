@@ -18,13 +18,12 @@ main{max-width:1600px;margin:0 auto;padding:20px}
 h1{font-size:1.5rem;margin:0 0 4px;line-height:1.2}
 .sub{color:var(--mute);margin:0 0 20px;max-width:60ch;font-size:0.95rem}
 
-/* Layout de 3 columnas */
-.three-col{display:grid;grid-template-columns:320px 1fr 380px;gap:20px;align-items:start}
+.three-col{display:grid;grid-template-columns:340px 1fr 380px;gap:20px;align-items:start}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 .card h2{font-size:1.1rem;margin:0 0 12px;color:var(--ink)}
+.card h3{font-size:1rem;margin:16px 0 8px;color:var(--ink);border-bottom:2px solid var(--line);padding-bottom:6px}
 
-/* Columna izquierda - Controles */
 .controls-col{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto}
 .controls-col::-webkit-scrollbar{width:6px}
 .controls-col::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
@@ -57,7 +56,28 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 
 .cap{font-size:0.85rem;color:var(--mute);margin:6px 0}
 
-/* Columna central - Visualización */
+/* Campos numéricos de certificado */
+.cert-fields{margin-top:16px}
+.cert-field{margin-bottom:12px}
+.cert-field label{display:block;font-size:0.85rem;font-weight:600;margin-bottom:4px;color:var(--ink)}
+.cert-field .field-hint{font-size:0.75rem;color:var(--mute);margin-bottom:4px;display:block}
+.cert-field input[type="number"]{width:100%;padding:8px 10px;border:2px solid var(--line);border-radius:6px;font:inherit;font-size:0.9rem;background:var(--bg);color:var(--ink);transition:border-color 0.2s}
+.cert-field input[type="number"]:focus{outline:none;border-color:var(--acc)}
+.cert-field input[type="number"]:invalid{border-color:var(--cmp)}
+.cert-field input[type="number"]:valid{border-color:var(--green)}
+
+.cert-actions{display:flex;gap:8px;margin-top:12px}
+.cert-actions button{flex:1;font:inherit;font-size:0.85rem;font-weight:600;padding:8px;border-radius:6px;cursor:pointer;transition:all 0.2s}
+.btn-apply{background:var(--acc);color:var(--card);border:2px solid var(--acc)}
+.btn-apply:hover{background:var(--acc-light);color:var(--ink);border-color:var(--acc)}
+.btn-reset{background:var(--bg);color:var(--ink);border:2px solid var(--line)}
+.btn-reset:hover{border-color:var(--mute)}
+
+.cert-status{margin-top:12px;padding:8px 12px;border-radius:6px;font-size:0.85rem;font-weight:600;display:none}
+.cert-status.active{display:block}
+.cert-status.custom{background:var(--acc-light);color:var(--acc);border-left:3px solid var(--acc)}
+.cert-status.default{background:var(--ok);color:var(--mute);border-left:3px solid var(--line)}
+
 .viz-col{display:flex;flex-direction:column;gap:16px}
 .viz-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 
@@ -79,7 +99,6 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 .legend-item{display:flex;align-items:center;gap:6px}
 .legend-color{width:16px;height:16px;border-radius:4px}
 
-/* Columna derecha - Información */
 .info-col{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto}
 .info-col::-webkit-scrollbar{width:6px}
 .info-col::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
@@ -106,7 +125,7 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 .struct-desc b{color:var(--ink)}
 
 @media(max-width:1200px){
-  .three-col{grid-template-columns:280px 1fr 320px;gap:16px}
+  .three-col{grid-template-columns:300px 1fr 340px;gap:16px}
 }
 @media(max-width:1024px){
   .three-col{grid-template-columns:1fr;gap:20px}
@@ -118,10 +137,9 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 <body>
 <main>
 <h1>Mapa del movimiento cervical - Configurable</h1>
-<p class="sub">Selecciona tus condiciones médicas para ajustar los límites de movimiento y las advertencias del modelo.</p>
+<p class="sub">Selecciona tus condiciones médicas e ingresa los valores exactos de tu certificado para ajustar los límites de movimiento.</p>
 
 <div class="three-col">
-  <!-- COLUMNA IZQUIERDA: CONTROLES -->
   <div class="controls-col">
     <div class="card">
       <h2>Controles</h2>
@@ -132,7 +150,43 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
         <label><input type="checkbox" id="cond_rec" onchange="handleConditionChange()"> Rectificación de la lordosis cervical</label>
       </div>
 
-      <div class="btn-group" id="pm">
+      <h3>Valores de tu certificado</h3>
+      <p class="cap">Ingresa los rangos máximos de movimiento según tu informe médico. Deja en blanco para usar valores por defecto.</p>
+      
+      <div class="cert-fields">
+        <div class="cert-field">
+          <label for="cert_flex">Flexión máxima (grados)</label>
+          <span class="field-hint">Rango normal: 45-50°</span>
+          <input type="number" id="cert_flex" min="0" max="90" step="1" placeholder="50">
+        </div>
+        
+        <div class="cert-field">
+          <label for="cert_ext">Extensión máxima (grados)</label>
+          <span class="field-hint">Rango normal: 45-50°</span>
+          <input type="number" id="cert_ext" min="0" max="90" step="1" placeholder="50">
+        </div>
+        
+        <div class="cert-field">
+          <label for="cert_rot">Rotación máxima (grados)</label>
+          <span class="field-hint">Rango normal: 70-80°</span>
+          <input type="number" id="cert_rot" min="0" max="120" step="1" placeholder="80">
+        </div>
+        
+        <div class="cert-field">
+          <label for="cert_tilt">Inclinación lateral máxima (grados)</label>
+          <span class="field-hint">Rango normal: 35-45°</span>
+          <input type="number" id="cert_tilt" min="0" max="90" step="1" placeholder="40">
+        </div>
+      </div>
+
+      <div class="cert-actions">
+        <button class="btn-apply" id="applyCert">Aplicar valores</button>
+        <button class="btn-reset" id="resetCert">Usar defaults</button>
+      </div>
+
+      <div id="certStatus" class="cert-status"></div>
+
+      <div class="btn-group" id="pm" style="margin-top:16px">
         <button data-h="rot" aria-pressed="true">Rotación</button>
         <button data-h="tilt" aria-pressed="false">Inclinación</button>
       </div>
@@ -153,7 +207,6 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
     </div>
   </div>
 
-  <!-- COLUMNA CENTRAL: VISUALIZACIÓN -->
   <div class="viz-col">
     <div class="viz-card">
       <div class="fig-wrap">
@@ -186,7 +239,6 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
     </div>
   </div>
 
-  <!-- COLUMNA DERECHA: ESTRUCTURAS -->
   <div class="info-col">
     <div class="card">
       <h2>Estructuras del cuello</h2>
@@ -224,317 +276,416 @@ const userConditions = {
     rectificacion: false
 };
 
-const MOV={
-flex:{n:"Flexión (mentón al pecho)",v:"side",max:50,cap:"Vista lateral. La cara mira a la derecha."},
-ext:{n:"Extensión (mirar arriba)",v:"side",max:50,cap:"Vista lateral. La cara mira a la derecha."},
-prot:{n:"Traslación anterior/posterior de la cabeza",v:"side",max:100,cap:"Vista lateral. Desplazamiento de la cabeza hacia delante o retracción hacia atrás."},
-rot:{n:"Rotación",v:"top",max:80,cap:"Vista desde arriba. La nariz apunta hacia arriba del dibujo."},
-tilt:{n:"Inclinación lateral",v:"front",max:40,cap:"Vista de frente. El lado derecho de la persona queda a la izquierda del dibujo."}};
+const DEFAULT_MOV = {
+    flex: { n: "Flexión (mentón al pecho)", v: "side", max: 50, cap: "Vista lateral. La cara mira a la derecha." },
+    ext: { n: "Extensión (mirar arriba)", v: "side", max: 50, cap: "Vista lateral. La cara mira a la derecha." },
+    prot: { n: "Traslación anterior/posterior de la cabeza", v: "side", max: 100, cap: "Vista lateral. Desplazamiento de la cabeza hacia delante o retracción hacia atrás." },
+    rot: { n: "Rotación", v: "top", max: 80, cap: "Vista desde arriba. La nariz apunta hacia arriba del dibujo." },
+    tilt: { n: "Inclinación lateral", v: "front", max: 40, cap: "Vista de frente. El lado derecho de la persona queda a la izquierda del dibujo." }
+};
 
-const S=[
-["Nervio vago",{flex:[1,"Estiramiento leve al alargarse la vaina que comparte con la carótida y la yugular."],ext:[0,"Poco cambio; el trayecto se acorta y se relaja."],prot:[1,"Tensión leve y sostenida desde la base del cráneo hasta el cuello."],rot:[1,"Lado {C}: se estira. Lado {I}: se relaja, aunque puede rozar el músculo esternocleidomastoideo."],tilt:[1,"Lado {C}: se estira. Lado {I}: la vaina queda presionada por los músculos laterales."]}],
-["Arteria vertebral",{flex:[1,"Se estira un poco entre C1 y el cráneo."],ext:[2,"Puede pinzarse entre el occipucio y C1, donde hace un giro muy cerrado. Mareo o visión borrosa son posibles."],prot:[2,"Extiende la unión del cráneo con C1: mismo punto de pinzamiento que en la extensión."],rot:[2,"Lado {C}: puede estirarse o comprimirse a nivel C1-C2, más aún con laxitud. Puede dar mareo o presíncope."],tilt:[1,"Lado {I}: puede plegarse. Lado {C}: se estira."]}],
-["Tronco encefálico y unión craneocervical",{flex:[2,"Con anterolistesis, la flexión puede hacer que las vértebras se deslicen hacia adelante, estrechando el canal y aumentando el riesgo de roce medular anterior."],ext:[1,"El borde del agujero magno y el arco de C1 se acercan por detrás."],prot:[2,"Combina tracción y compresión; es una posición exigente si hay inestabilidad."],rot:[1,"C1 gira sobre C2 y los ligamentos alares se tensan. Con laxitud, el giro excesivo reduce el espacio."],tilt:[1,"Los ligamentos alares frenan el desplazamiento lateral y trabajan de más con laxitud."]}],
-["Médula cervical",{flex:[2,"Con anterolistesis, la flexión puede hacer que las vértebras se deslicen hacia adelante, estrechando el canal. Evita llegar al final del rango."],ext:[2,"El ligamento amarillo se pliega hacia atrás y reduce el canal: posible estrechamiento o compromiso teórico."],prot:[1,"Estiramiento sostenido en la zona baja del cuello."],rot:[1,"Se tuerce levemente y el canal se estrecha un poco."],tilt:[0,"Cambio pequeño si no hay estenosis."]}],
-["Raíces nerviosas y plexo braquial",{flex:[1,"Se estiran al abrirse los agujeros de salida."],ext:[2,"Los agujeros se estrechan: posible pinzamiento y dolor que baja al brazo."],prot:[1,"Tensión en las raíces bajas (C5 a C8)."],rot:[1,"Lado {I}: el agujero se cierra. Lado {C}: se abre."],tilt:[2,"Lado {I}: el agujero se cierra (posible pinzamiento). Lado {C}: el plexo braquial se estira."]}],
-["Ligamentos y cápsulas articulares",{flex:[1,"Los ligamentos posteriores soportan la tensión. Con rectificación de la lordosis, están más tensos de lo normal en posición neutra."],ext:[1,"Los ligamentos anteriores y las cápsulas articulares soportan la carga."],prot:[1,"Carga sostenida en ligamentos y cápsulas."],rot:[1,"Los ligamentos alares y transverso trabajan al máximo; en SED pueden limitar peor."],tilt:[1,"Las cápsulas articulares del lado {C} se estiran."]}],
-["Músculos suboccipitales y esternocleidomastoideo",{flex:[1,"Se estiran y los extensores frenan el peso de la cabeza. La rectificación de la lordosis hace que los suboccipitales estén más tensos de lo normal."],ext:[1,"Los suboccipitales se acortan y se sobrecargan."],prot:[1,"Suboccipitales acortados de forma sostenida; fuente frecuente de dolor de cabeza de origen cervical."],rot:[1,"Lado {C}: el esternocleidomastoideo se estira. Lado {I}: se acorta."],tilt:[1,"Lado {C} se estira, lado {I} se acorta."]}],
-["Inestabilidad vertebral (Hallazgo RX)",{flex:[2,"La flexión puede provocar deslizamiento vertebral y riesgo de compresión medular anterior si hay anterolistesis."],ext:[1,"En extensión, las vértebras vuelven a su sitio, pero los ligamentos están laxos."],prot:[2,"El adelantamiento de la cabeza puede agravar el deslizamiento vertebral."],rot:[1,"La rotación puede generar estrés en las facetas inestables."],tilt:[1,"La inclinación lateral puede descompensar la alineación."]}]
+const MOV = JSON.parse(JSON.stringify(DEFAULT_MOV));
+
+const S = [
+    ["Nervio vago", { flex: [1, "Estiramiento leve al alargarse la vaina que comparte con la carótida y la yugular."], ext: [0, "Poco cambio; el trayecto se acorta y se relaja."], prot: [1, "Tensión leve y sostenida desde la base del cráneo hasta el cuello."], rot: [1, "Lado {C}: se estira. Lado {I}: se relaja, aunque puede rozar el músculo esternocleidomastoideo."], tilt: [1, "Lado {C}: se estira. Lado {I}: la vaina queda presionada por los músculos laterales."] }],
+    ["Arteria vertebral", { flex: [1, "Se estira un poco entre C1 y el cráneo."], ext: [2, "Puede pinzarse entre el occipucio y C1, donde hace un giro muy cerrado. Mareo o visión borrosa son posibles."], prot: [2, "Extiende la unión del cráneo con C1: mismo punto de pinzamiento que en la extensión."], rot: [2, "Lado {C}: puede estirarse o comprimirse a nivel C1-C2, más aún con laxitud. Puede dar mareo o presíncope."], tilt: [1, "Lado {I}: puede plegarse. Lado {C}: se estira."] }],
+    ["Tronco encefálico y unión craneocervical", { flex: [2, "Con anterolistesis, la flexión puede hacer que las vértebras se deslicen hacia adelante, estrechando el canal y aumentando el riesgo de roce medular anterior."], ext: [1, "El borde del agujero magno y el arco de C1 se acercan por detrás."], prot: [2, "Combina tracción y compresión; es una posición exigente si hay inestabilidad."], rot: [1, "C1 gira sobre C2 y los ligamentos alares se tensan. Con laxitud, el giro excesivo reduce el espacio."], tilt: [1, "Los ligamentos alares frenan el desplazamiento lateral y trabajan de más con laxitud."] }],
+    ["Médula cervical", { flex: [2, "Con anterolistesis, la flexión puede hacer que las vértebras se deslicen hacia adelante, estrechando el canal. Evita llegar al final del rango."], ext: [2, "El ligamento amarillo se pliega hacia atrás y reduce el canal: posible estrechamiento o compromiso teórico."], prot: [1, "Estiramiento sostenido en la zona baja del cuello."], rot: [1, "Se tuerce levemente y el canal se estrecha un poco."], tilt: [0, "Cambio pequeño si no hay estenosis."] }],
+    ["Raíces nerviosas y plexo braquial", { flex: [1, "Se estiran al abrirse los agujeros de salida."], ext: [2, "Los agujeros se estrechan: posible pinzamiento y dolor que baja al brazo."], prot: [1, "Tensión en las raíces bajas (C5 a C8)."], rot: [1, "Lado {I}: el agujero se cierra. Lado {C}: se abre."], tilt: [2, "Lado {I}: el agujero se cierra (posible pinzamiento). Lado {C}: el plexo braquial se estira."] }],
+    ["Ligamentos y cápsulas articulares", { flex: [1, "Los ligamentos posteriores soportan la tensión. Con rectificación de la lordosis, están más tensos de lo normal en posición neutra."], ext: [1, "Los ligamentos anteriores y las cápsulas articulares soportan la carga."], prot: [1, "Carga sostenida en ligamentos y cápsulas."], rot: [1, "Los ligamentos alares y transverso trabajan al máximo; en SED pueden limitar peor."], tilt: [1, "Las cápsulas articulares del lado {C} se estiran."] }],
+    ["Músculos suboccipitales y esternocleidomastoideo", { flex: [1, "Se estiran y los extensores frenan el peso de la cabeza. La rectificación de la lordosis hace que los suboccipitales estén más tensos de lo normal."], ext: [1, "Los suboccipitales se acortan y se sobrecargan."], prot: [1, "Suboccipitales acortados de forma sostenida; fuente frecuente de dolor de cabeza de origen cervical."], rot: [1, "Lado {C}: el esternocleidomastoideo se estira. Lado {I}: se acorta."], tilt: [1, "Lado {C} se estira, lado {I} se acorta."] }],
+    ["Inestabilidad vertebral (Hallazgo RX)", { flex: [2, "La flexión puede provocar deslizamiento vertebral y riesgo de compresión medular anterior si hay anterolistesis."], ext: [1, "En extensión, las vértebras vuelven a su sitio, pero los ligamentos están laxos."], prot: [2, "El adelantamiento de la cabeza puede agravar el deslizamiento vertebral."], rot: [1, "La rotación puede generar estrés en las facetas inestables."], tilt: [1, "La inclinación lateral puede descompensar la alineación."] }]
 ];
 
-const TAGS=["Poco cambio","Estiramiento o carga","Posible estrechamiento o compromiso teórico"];
-const $=id=>document.getElementById(id);
-const SN={der:"derecho",izq:"izquierdo"};
-const AX={fe:{n:"Flexión / extensión",l:"Extensión",r:"Flexión"},prot:{n:"Traslación anterior / retracción",l:"Retracción",r:"Adelantamiento"},rot:{n:"Rotación axial",l:"Izquierda",r:"Derecha"},tilt:{n:"Inclinación lateral",l:"Izquierda",r:"Derecha"}};
-const V0={fe:0,prot:0,rot:0,tilt:0};let focus="fe";
+const TAGS = ["Poco cambio", "Estiramiento o carga", "Posible estrechamiento o compromiso teórico"];
+const $ = id => document.getElementById(id);
+const SN = { der: "derecho", izq: "izquierdo" };
+const AX = { fe: { n: "Flexión / extensión", l: "Extensión", r: "Flexión" }, prot: { n: "Traslación anterior / retracción", l: "Retracción", r: "Adelantamiento" }, rot: { n: "Rotación axial", l: "Izquierda", r: "Derecha" }, tilt: { n: "Inclinación lateral", l: "Izquierda", r: "Derecha" } };
+const V0 = { fe: 0, prot: 0, rot: 0, tilt: 0 };
+let focus = "fe";
+let certApplied = false;
 
 function handleConditionChange() {
     userConditions.sed = $("cond_sed").checked;
     userConditions.anterolistesis = $("cond_ant").checked;
     userConditions.rectificacion = $("cond_rec").checked;
 
-    MOV.flex.max = 50;
+    applyCertValues();
+    render();
+}
+
+function applyCertValues() {
+    const flexVal = parseFloat($("cert_flex").value);
+    const extVal = parseFloat($("cert_ext").value);
+    const rotVal = parseFloat($("cert_rot").value);
+    const tiltVal = parseFloat($("cert_tilt").value);
+
+    MOV.flex.max = (!isNaN(flexVal) && flexVal > 0) ? flexVal : DEFAULT_MOV.flex.max;
+    MOV.ext.max = (!isNaN(extVal) && extVal > 0) ? extVal : DEFAULT_MOV.ext.max;
+    MOV.rot.max = (!isNaN(rotVal) && rotVal > 0) ? rotVal : DEFAULT_MOV.rot.max;
+    MOV.tilt.max = (!isNaN(tiltVal) && tiltVal > 0) ? tiltVal : DEFAULT_MOV.tilt.max;
+
+    if (userConditions.anterolistesis && MOV.flex.max > 35) {
+        MOV.flex.max = 35;
+    }
+
+    const hasCustomValues = !isNaN(flexVal) || !isNaN(extVal) || !isNaN(rotVal) || !isNaN(tiltVal);
+    certApplied = hasCustomValues;
+
+    const statusEl = $("certStatus");
+    if (hasCustomValues) {
+        statusEl.textContent = `✓ Valores personalizados aplicados: Flexión ${MOV.flex.max}°, Extensión ${MOV.ext.max}°, Rotación ${MOV.rot.max}°, Inclinación ${MOV.tilt.max}°`;
+        statusEl.className = "cert-status active custom";
+    } else {
+        statusEl.textContent = "Usando valores por defecto";
+        statusEl.className = "cert-status active default";
+    }
+
+    updateWarning();
+}
+
+function updateWarning() {
     const warningEl = $("clinical-warning");
     warningEl.classList.remove("active");
 
     if (userConditions.anterolistesis) {
-        MOV.flex.max = 35;
         warningEl.textContent = "⚠️ ATENCIÓN: Tu RX dinámica confirma anterolistesis de C2 sobre C3 y C3 sobre C4 en flexión. Evita forzar el mentón al pecho.";
-        warningEl.classList.add("active");
+        if (V0.fe > 15 || V0.prot > 15) {
+            warningEl.classList.add("active");
+        }
     } else if (V0.fe > 15 || V0.prot > 15) {
         warningEl.textContent = "⚠️ ATENCIÓN: Movimiento de flexión o adelantamiento elevado. Evita forzar el mentón al pecho.";
         warningEl.classList.add("active");
     }
-
-    render();
 }
 
-function sliders(){$("sl").innerHTML=Object.entries(AX).map(([k,x])=>`<div class="ax"><label for="r_${k}">${x.n}: <b id="o_${k}">neutra</b></label><input type="range" id="r_${k}" data-k="${k}" min="-100" max="100" value="${V0[k]}"><div class="ends"><span>${x.l}</span><span>${x.r}</span></div></div>`).join("");}
-function acts(){const o=[],fe=V0.fe;
-if(fe)o.push({k:"fe",mv:fe>0?"flex":"ext",side:"der",a:Math.abs(fe)});
-if(V0.prot)o.push({k:"prot",mv:"prot",side:V0.prot>0?"der":"izq",a:Math.abs(V0.prot)});
-if(V0.rot)o.push({k:"rot",mv:"rot",side:V0.rot>0?"der":"izq",a:Math.abs(V0.rot)});
-if(V0.tilt)o.push({k:"tilt",mv:"tilt",side:V0.tilt>0?"der":"izq",a:Math.abs(V0.tilt)});return o;}
-const R=Math.PI/180,CD="#d8b84e",GAP=[29,28,27,26,25,20];
-const tf=(p,o)=>{const c=Math.cos(o.a*R),s=Math.sin(o.a*R);return[o.x+p[0]*c-p[1]*s,o.y+p[0]*s+p[1]*c]};
-const pl=(P,c,w,x="")=>`<polyline points="${P.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" ${x}/>`;
-function chain(ang,sk){const V=[{x:150,y:335,a:ang[0]}];
-for(let i=0;i<6;i++){const o=V[i],a=(o.a+ang[i+1])/2*R;V.push({x:o.x+Math.sin(a)*GAP[i],y:o.y-Math.cos(a)*GAP[i],a:ang[i+1]});}
-return{V,S:{x:V[6].x,y:V[6].y,a:sk}};}
-const gt=o=>`<g transform="translate(${o.x.toFixed(1)},${o.y.toFixed(1)}) rotate(${o.a.toFixed(1)})" fill="var(--bone)" stroke="var(--mute)" stroke-width="1.5">`;
-function vert(i,o){let g=gt(o);
-if(i<6)g+=`<rect x="-4" y="${-GAP[i]+10}" width="22" height="${GAP[i]-20}" rx="3" fill="var(--line)" stroke="none"/>`;
-if(i<6)g+=`<rect x="-4" y="-10" width="22" height="20" rx="5"/><rect x="-22" y="-9" width="19" height="4" rx="2"/><rect x="-27" y="-7" width="6" height="17" rx="3"/><path d="M-24 -3 L-48 8 L-24 9Z"/>`+(i>0?`<circle cx="7" cy="0" r="4" fill="var(--card)"/>`:"");
-if(i===5)g+=`<path d="M0 -10 L4 -31 L11 -31 L14 -10Z"/>`;
-if(i===6)g+=`<ellipse cx="11" cy="-2" rx="4" ry="8"/><ellipse cx="-18" cy="-2" rx="5" ry="9"/><rect x="-6" y="-9" width="14" height="14" rx="4"/>`;
-return g+`</g>`;}
-function vertF(i,o){let g=gt(o);
-if(i<6)g+=`<rect x="-16" y="${-GAP[i]+10}" width="32" height="${GAP[i]-20}" fill="var(--line)" stroke="none"/>`;
-return g+`<rect x="-16" y="-10" width="32" height="20" rx="4"/><rect x="${i===6?-36:-30}" y="-4" width="${i===6?72:60}" height="8" rx="3"/></g>`;}
-const SK="M-40 -8 C-78 -30 -76 -110 -20 -130 C30 -144 80 -120 84 -82 L88 -70 L102 -52 L92 -48 L94 -40 L89 -32 L92 -22 L84 -6 L40 -2 L24 -12 L6 -14Z",JW="",BR='<ellipse cx="14" cy="-84" rx="52" ry="38" fill="#e7a9b8" fill-opacity=".35" stroke="none"/><ellipse cx="-30" cy="-44" rx="26" ry="17" fill="#b08fd0" fill-opacity=".45" stroke="none"/>';
-function skull(K,fr,gh){const f=gh?'fill="none"':'fill="var(--bone)" stroke="var(--mute)" stroke-width="2"';
-return `<g transform="translate(${K.x.toFixed(1)},${K.y.toFixed(1)}) rotate(${K.a.toFixed(1)})" ${f}>`+(fr?`<ellipse cx="0" cy="-42" rx="40" ry="44"/><path d="M-22 -4 Q0 12 22 -4"/>`:`<path d="${SK}"/>`+(gh?"":BR)+`<ellipse cx="6" cy="-46" rx="6" ry="10"/><circle cx="64" cy="-72" r="2.5" fill="var(--mute)"/>`)+`</g>`;}
-const ghost=(G,f)=>`<g opacity=".5" stroke="var(--mute)" stroke-width="1.5" fill="none">${pl(G.V.map(o=>[o.x,o.y]).concat([[G.S.x,G.S.y]]),"var(--mute)",1.5,'stroke-dasharray="4 4"')}${skull(G.S,f,1)}</g>`;
-const PA={
-0:{rot:"C1 y apófisis estiloides",tilt:"músculos del cuello"},
-1:{flex:"arco de C1",ext:"arco de C1 y cráneo",prot:"arco de C1 y cráneo",rot:"C1 girando sobre C2",tilt:"apófisis transversas"},
-2:{flex:"odontoides de C2",ext:"agujero magno y C1",prot:"odontoides y agujero magno",rot:"odontoides y ligamento",tilt:"masas laterales de C1"},
-3:{flex:"odontoides y vértebras",ext:"ligamento amarillo y láminas",prot:"cuerpos vertebrales",rot:"ligamento transverso",tilt:"paredes del canal"},
-4:{ext:"articulaciones facetarias",tilt:"articulaciones facetarias",def:"huesos del agujero"}};
-const NS=["Nervio vago","Arteria vertebral","Tronco encefálico","Médula","Raíces nerviosas","Ligamento nucal","Suboccipitales", "Inestabilidad vertebral"];
-const mark=(i,p,v,an,l)=>{const c=v>1?"var(--cmp)":"var(--str)",x=p[0].toFixed(1),y=p[1].toFixed(1);
-const ar=v>1?[0,180].map(d=>{const q=(an+d)*R,f=(r)=>[(p[0]+Math.cos(q)*r).toFixed(1),(p[1]+Math.sin(q)*r).toFixed(1)],a=f(24),b=f(13);return `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${c}" stroke-width="3" marker-end="url(#ar)"/>`}).join(""):"";
-const ag=v>1&&PA[i]?(PA[i][mv]||PA[i].def||""):"";const tl=l?`<text x="${l==="l"?p[0]-15:p[0]+15}" y="${(p[1]+4).toFixed(1)}" text-anchor="${l==="l"?"end":"start"}" font-size="10" font-weight="700" fill="var(--ink)" stroke="var(--card)" stroke-width="3" paint-order="stroke">${NS[i]}</text>`+(ag?`<text x="${l==="l"?p[0]-15:p[0]+15}" y="${(p[1]+15).toFixed(1)}" text-anchor="${l==="l"?"end":"start"}" font-size="9" fill="var(--cmp)" stroke="var(--card)" stroke-width="3" paint-order="stroke">contra ${ag}</text>`:""):"";
-return `<g class="mk${v}">${ar}<circle cx="${x}" cy="${y}" r="10" fill="${c}" fill-opacity=".3" stroke="${c}" stroke-width="2"/><text x="${x}" y="${(p[1]+4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink)">${i+1}</text>${tl}</g>`};
-
-function eff(s,a,n,q){if(a<20)return 0;return s;}
-function draw(a){
-const m=MOV[mv],deg=m.max*a/100;
-const st=S.map(([n,d])=>eff(d[mv][0],a,n,mv));
-const cv=st[0]>1?"var(--cmp)":"var(--vago)",ca=st[1]>1?"var(--cmp)":"var(--art)";
-let s='<defs><marker id="ar" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6z" fill="var(--cmp)"/></marker></defs>',H=[];
-const G=chain([0,0,0,0,0,0,0],0);
-if(m.v==="side"){
-const t=mv==="flex"?deg:mv==="ext"?-deg:0,p=mv==="prot"?(side==="der"?a:-a)/100:0;
-const PR=[0,8,16,18,10,-8,-20],ang=PR.map((v,i)=>p*v+t*i/7);
-const {V,S:K}=chain(ang,t-26*p),spin=o=>tf([-45,6],o);
-const skin=[...V].reverse().map(o=>tf([-66,0],o)).concat([[70,362],[60,380],[250,380],[238,358]],V.slice(0,6).map(o=>tf([74,0],o)),[tf([56,2],K)]);
-s+=`<polygon points="${skin.map(q=>q[0].toFixed(1)+","+q[1].toFixed(1)).join(" ")}" fill="var(--ok)" fill-opacity=".6" stroke="var(--line)"/>`;
-s+=pl(V.slice(0,6).map(o=>tf([46,0],o)),"#d98a8a",8,'opacity=".55"')+pl(V.slice(0,3).map(o=>tf([64,0],o)),"#7fb3c8",14,'opacity=".55"');
-s+=pl(V.map(o=>tf([-58,0],o)).concat([tf([-50,-30],K)]),"var(--acc)",12,'opacity=".18"')+pl([tf([6,-16],K),tf([52,0],V[3]),tf([60,0],V[0]),[214,352]],"var(--acc)",7,'opacity=".3"');
-s+=ghost(G,0)+skull(K)+V.map((o,i)=>vert(i,o)).join("");
-s+=pl(V.slice(0,6).map(spin).concat([tf([-36,-14],K)]),"var(--mute)",1.5,'stroke-dasharray="3 3"');
-const m1=spin(V[5]),m2=tf([-40,-16],K);
-s+=pl([m1,m2],"var(--acc)",6,'opacity=".7"');
-s+=pl(V.map(o=>tf([-12,0],o)).concat([tf([-8,-30],K),tf([-4,-58],K)]),CD,7);
-s+=pl(V.slice(1,6).map(o=>tf([7,0],o)).concat([tf([7,-8],V[6]),tf([-18,-16],V[6]),tf([-16,-30],K),tf([-6,-44],K)]),ca,3);
-const vg=V.map(o=>tf([32,0],o)).concat([tf([32,-10],V[6]),tf([26,-22],K)]);
-s+=pl(vg,"var(--vago)",12,'opacity=".18"')+pl(vg,cv,3.5);
-const tx=(q,x,fs)=>`<text x="${q[0].toFixed(1)}" y="${q[1].toFixed(1)}" font-size="${fs}" fill="var(--mute)">${x}</text>`;
-s+=V.map((o,i)=>tx(tf([-62,4],o),"C"+(7-i),10)).join("")+tx(tf([88,6],V[1]),"Tráquea y esófago",9)+tx(tf([-40,-38],K),"Cerebelo",9);
-if(mv==="flex" && a > 20) {
-    s+=`<circle cx="${tf([-10,0],V[4])[0].toFixed(1)}" cy="${tf([-10,0],V[4])[1].toFixed(1)}" r="12" fill="var(--cmp)" opacity="0.3"/><text x="${tf([-10,0],V[4])[0].toFixed(1)}" y="${tf([-10,0],V[4])[1].toFixed(1)}" text-anchor="middle" font-size="9" fill="white" font-weight="bold">!</text>`;
+function sliders() {
+    $("sl").innerHTML = Object.entries(AX).map(([k, x]) => `<div class="ax"><label for="r_${k}">${x.n}: <b id="o_${k}">neutra</b></label><input type="range" id="r_${k}" data-k="${k}" min="-100" max="100" value="${V0[k]}"><div class="ends"><span>${x.l}</span><span>${x.r}</span></div></div>`).join("");
 }
-H=[[0,tf([32,-8],V[6]),0,"r"],[1,tf([-14,-14],V[6]),90,"l"],[2,tf([8,-34],V[5]),0,"r"],[3,tf([-12,0],V[3]),0,"l"],[4,tf([4,-20],V[3]),0,"r"],[5,spin(V[1]),0,"l"],[6,[(m1[0]+m2[0])/2,(m1[1]+m2[1])/2],90,"l"]];
-}else if(m.v==="top"){
-const r=(side==="der"?1:-1)*deg,cx=160,cy=172,rp=(x,y)=>tf({x:cx,y:cy,a:r},[x-cx,y-cy]);
-const ax=side==="der"?102:218,vx=side==="der"?88:232;
-s+=`<ellipse cx="160" cy="192" rx="58" ry="70" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="4 4" opacity=".5"/>`;
-s+=`<ellipse cx="160" cy="205" rx="78" ry="52" fill="var(--line)" opacity=".6"/><ellipse cx="160" cy="168" rx="11" ry="17" fill="var(--bone)" stroke="var(--mute)" stroke-width="1.5"/>`;
-s+=`<circle cx="160" cy="224" r="14" fill="${CD}"/>`;
-s+=`<g transform="rotate(${r} ${cx} ${cy})"><ellipse cx="160" cy="192" rx="58" ry="70" fill="none" stroke="var(--bone)" stroke-width="16"/><ellipse cx="160" cy="192" rx="66" ry="78" fill="none" stroke="var(--mute)" stroke-width="1.5"/><ellipse cx="160" cy="192" rx="50" ry="62" fill="none" stroke="var(--mute)" stroke-width="1.5"/><line x1="112" y1="190" x2="208" y2="190" stroke="var(--str)" stroke-width="4"/><circle cx="102" cy="196" r="6" fill="${ca}"/><circle cx="218" cy="196" r="6" fill="${ca}"/><path d="M160 84 l-9 16 h18z" fill="var(--acc)"/></g>`;
-s+=`<circle cx="88" cy="140" r="14" fill="var(--vago)" opacity=".18"/><circle cx="232" cy="140" r="14" fill="var(--vago)" opacity=".18"/><circle cx="88" cy="140" r="7" fill="${side==="izq"?cv:"var(--vago)"}"/><circle cx="232" cy="140" r="7" fill="${side==="der"?cv:"var(--vago)"}"/>`;
-s+=`<text x="160" y="40" text-anchor="middle" font-size="11" fill="var(--mute)">Frente</text><text x="160" y="318" text-anchor="middle" font-size="11" fill="var(--mute)">Espalda</text><text x="160" y="340" text-anchor="middle" font-size="11" fill="var(--mute)">Anillo de C1 girando alrededor de C2</text>`;
-H=[[0,[vx,140]],[1,rp(ax,196)],[2,[160,168]],[3,[160,224]],[5,rp(160,190)]];
-}else{
-const sg=side==="der"?-1:1,t=sg*deg;
-const {V,S:K}=chain([0,1,2,3,4,5,6].map(i=>t*i/7),t);
-s+=ghost(G,1)+skull(K,1);
-s+=pl(V.map(o=>tf([0,0],o)).concat([tf([0,-40],K)]),CD,7);
-s+=V.map((o,i)=>vertF(i,o)).join("");
-for(const e of[-1,1]){
-for(let i=0;i<4;i++)s+=pl([tf([e*16,-GAP[i]/2],V[i]),tf([e*52,-GAP[i]/2+8],V[i])],"var(--acc)",2.5);
-s+=pl(V.slice(1,6).map(o=>tf([e*22,0],o)).concat([tf([e*30,-4],V[6]),tf([e*14,-26],K)]),ca,3);
-const vg=V.map(o=>tf([e*44,0],o)).concat([tf([e*36,-24],K)]);
-s+=pl(vg,"var(--vago)",10,'opacity=".18"')+pl(vg,cv,3);}
-H=[[0,tf([-sg*44,0],V[4])],[1,tf([sg*22,0],V[5])],[2,tf([0,-14],V[6])],[3,tf([0,0],V[3])],[4,tf([sg*40,-GAP[3]/2],V[3])],[5,tf([-sg*14,-10],V[6])],[6,tf([-sg*40,-20],V[4])]];
-}
-s+=H.map(([i,p,an,l])=>st[i]?mark(i,p,st[i],an||0,l):"").join("");
-$("fig").innerHTML=s;}
 
-function poseSummary(){
-const p=[];
-if(V0.fe>0)p.push("flexión");else if(V0.fe<0)p.push("extensión");
-if(V0.prot>0)p.push("adelantamiento");else if(V0.prot<0)p.push("retracción");
-if(V0[hk]>0)p.push(hk==="rot"?"rotación derecha":"inclinación derecha");else if(V0[hk]<0)p.push(hk==="rot"?"rotación izquierda":"inclinación izquierda");
-return p.length?"Movimiento seleccionado: "+p.join(" + ")+".":"Posición neutra.";
+function acts() {
+    const o = [], fe = V0.fe;
+    if (fe) o.push({ k: "fe", mv: fe > 0 ? "flex" : "ext", side: "der", a: Math.abs(fe) });
+    if (V0.prot) o.push({ k: "prot", mv: "prot", side: V0.prot > 0 ? "der" : "izq", a: Math.abs(V0.prot) });
+    if (V0.rot) o.push({ k: "rot", mv: "rot", side: V0.rot > 0 ? "der" : "izq", a: Math.abs(V0.rot) });
+    if (V0.tilt) o.push({ k: "tilt", mv: "tilt", side: V0.tilt > 0 ? "der" : "izq", a: Math.abs(V0.tilt) });
+    return o;
+}
+
+const R = Math.PI / 180, CD = "#d8b84e", GAP = [29, 28, 27, 26, 25, 20];
+const tf = (p, o) => { const c = Math.cos(o.a * R), s = Math.sin(o.a * R); return [o.x + p[0] * c - p[1] * s, o.y + p[0] * s + p[1] * c]; };
+const pl = (P, c, w, x = "") => `<polyline points="${P.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" ${x}/>`;
+
+function chain(ang, sk) {
+    const V = [{ x: 150, y: 335, a: ang[0] }];
+    for (let i = 0; i < 6; i++) { const o = V[i], a = (o.a + ang[i + 1]) / 2 * R; V.push({ x: o.x + Math.sin(a) * GAP[i], y: o.y - Math.cos(a) * GAP[i], a: ang[i + 1] }); }
+    return { V, S: { x: V[6].x, y: V[6].y, a: sk } };
+}
+
+const gt = o => `<g transform="translate(${o.x.toFixed(1)},${o.y.toFixed(1)}) rotate(${o.a.toFixed(1)})" fill="var(--bone)" stroke="var(--mute)" stroke-width="1.5">`;
+
+function vert(i, o) {
+    let g = gt(o);
+    if (i < 6) g += `<rect x="-4" y="${-GAP[i] + 10}" width="22" height="${GAP[i] - 20}" rx="3" fill="var(--line)" stroke="none"/>`;
+    if (i < 6) g += `<rect x="-4" y="-10" width="22" height="20" rx="5"/><rect x="-22" y="-9" width="19" height="4" rx="2"/><rect x="-27" y="-7" width="6" height="17" rx="3"/><path d="M-24 -3 L-48 8 L-24 9Z"/>` + (i > 0 ? `<circle cx="7" cy="0" r="4" fill="var(--card)"/>` : "");
+    if (i === 5) g += `<path d="M0 -10 L4 -31 L11 -31 L14 -10Z"/>`;
+    if (i === 6) g += `<ellipse cx="11" cy="-2" rx="4" ry="8"/><ellipse cx="-18" cy="-2" rx="5" ry="9"/><rect x="-6" y="-9" width="14" height="14" rx="4"/>`;
+    return g + `</g>`;
+}
+
+function vertF(i, o) {
+    let g = gt(o);
+    if (i < 6) g += `<rect x="-16" y="${-GAP[i] + 10}" width="32" height="${GAP[i] - 20}" fill="var(--line)" stroke="none"/>`;
+    return g + `<rect x="-16" y="-10" width="32" height="20" rx="4"/><rect x="${i === 6 ? -36 : -30}" y="-4" width="${i === 6 ? 72 : 60}" height="8" rx="3"/></g>`;
+}
+
+const SK = "M-40 -8 C-78 -30 -76 -110 -20 -130 C30 -144 80 -120 84 -82 L88 -70 L102 -52 L92 -48 L94 -40 L89 -32 L92 -22 L84 -6 L40 -2 L24 -12 L6 -14Z", JW = "", BR = '<ellipse cx="14" cy="-84" rx="52" ry="38" fill="#e7a9b8" fill-opacity=".35" stroke="none"/><ellipse cx="-30" cy="-44" rx="26" ry="17" fill="#b08fd0" fill-opacity=".45" stroke="none"/>';
+
+function skull(K, fr, gh) {
+    const f = gh ? 'fill="none"' : 'fill="var(--bone)" stroke="var(--mute)" stroke-width="2"';
+    return `<g transform="translate(${K.x.toFixed(1)},${K.y.toFixed(1)}) rotate(${K.a.toFixed(1)})" ${f}>` + (fr ? `<ellipse cx="0" cy="-42" rx="40" ry="44"/><path d="M-22 -4 Q0 12 22 -4"/>` : `<path d="${SK}"/>` + (gh ? "" : BR) + `<ellipse cx="6" cy="-46" rx="6" ry="10"/><circle cx="64" cy="-72" r="2.5" fill="var(--mute)"/>`) + `</g>`;
+}
+
+const ghost = (G, f) => `<g opacity=".5" stroke="var(--mute)" stroke-width="1.5" fill="none">${pl(G.V.map(o => [o.x, o.y]).concat([[G.S.x, G.S.y]]), "var(--mute)", 1.5, 'stroke-dasharray="4 4"')}${skull(G.S, f, 1)}</g>`;
+
+const PA = {
+    0: { rot: "C1 y apófisis estiloides", tilt: "músculos del cuello" },
+    1: { flex: "arco de C1", ext: "arco de C1 y cráneo", prot: "arco de C1 y cráneo", rot: "C1 girando sobre C2", tilt: "apófisis transversas" },
+    2: { flex: "odontoides de C2", ext: "agujero magno y C1", prot: "odontoides y agujero magno", rot: "odontoides y ligamento", tilt: "masas laterales de C1" },
+    3: { flex: "odontoides y vértebras", ext: "ligamento amarillo y láminas", prot: "cuerpos vertebrales", rot: "ligamento transverso", tilt: "paredes del canal" },
+    4: { ext: "articulaciones facetarias", tilt: "articulaciones facetarias", def: "huesos del agujero" }
+};
+
+const NS = ["Nervio vago", "Arteria vertebral", "Tronco encefálico", "Médula", "Raíces nerviosas", "Ligamento nucal", "Suboccipitales", "Inestabilidad vertebral"];
+
+const mark = (i, p, v, an, l) => {
+    const c = v > 1 ? "var(--cmp)" : "var(--str)", x = p[0].toFixed(1), y = p[1].toFixed(1);
+    const ar = v > 1 ? [0, 180].map(d => { const q = (an + d) * R, f = (r) => [(p[0] + Math.cos(q) * r).toFixed(1), (p[1] + Math.sin(q) * r).toFixed(1)], a = f(24), b = f(13); return `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${c}" stroke-width="3" marker-end="url(#ar)"/>` }).join("") : "";
+    const ag = v > 1 && PA[i] ? (PA[i][mv] || PA[i].def || "") : "";
+    const tl = l ? `<text x="${l === "l" ? p[0] - 15 : p[0] + 15}" y="${(p[1] + 4).toFixed(1)}" text-anchor="${l === "l" ? "end" : "start"}" font-size="10" font-weight="700" fill="var(--ink)" stroke="var(--card)" stroke-width="3" paint-order="stroke">${NS[i]}</text>` + (ag ? `<text x="${l === "l" ? p[0] - 15 : p[0] + 15}" y="${(p[1] + 15).toFixed(1)}" text-anchor="${l === "l" ? "end" : "start"}" font-size="9" fill="var(--cmp)" stroke="var(--card)" stroke-width="3" paint-order="stroke">contra ${ag}</text>` : "") : "";
+    return `<g class="mk${v}">${ar}<circle cx="${x}" cy="${y}" r="10" fill="${c}" fill-opacity=".3" stroke="${c}" stroke-width="2"/><text x="${x}" y="${(p[1] + 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink)">${i + 1}</text>${tl}</g>`;
+};
+
+function eff(s, a, n, q) { if (a < 20) return 0; return s; }
+
+function draw(a) {
+    const m = MOV[mv], deg = m.max * a / 100;
+    const st = S.map(([n, d]) => eff(d[mv][0], a, n, mv));
+    const cv = st[0] > 1 ? "var(--cmp)" : "var(--vago)", ca = st[1] > 1 ? "var(--cmp)" : "var(--art)";
+    let s = '<defs><marker id="ar" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6z" fill="var(--cmp)"/></marker></defs>', H = [];
+    const G = chain([0, 0, 0, 0, 0, 0, 0], 0);
+    if (m.v === "side") {
+        const t = mv === "flex" ? deg : mv === "ext" ? -deg : 0, p = mv === "prot" ? (side === "der" ? a : -a) / 100 : 0;
+        const PR = [0, 8, 16, 18, 10, -8, -20], ang = PR.map((v, i) => p * v + t * i / 7);
+        const { V, S: K } = chain(ang, t - 26 * p), spin = o => tf([-45, 6], o);
+        const skin = [...V].reverse().map(o => tf([-66, 0], o)).concat([[70, 362], [60, 380], [250, 380], [238, 358]], V.slice(0, 6).map(o => tf([74, 0], o)), [tf([56, 2], K)]);
+        s += `<polygon points="${skin.map(q => q[0].toFixed(1) + "," + q[1].toFixed(1)).join(" ")}" fill="var(--ok)" fill-opacity=".6" stroke="var(--line)"/>`;
+        s += pl(V.slice(0, 6).map(o => tf([46, 0], o)), "#d98a8a", 8, 'opacity=".55"') + pl(V.slice(0, 3).map(o => tf([64, 0], o)), "#7fb3c8", 14, 'opacity=".55"');
+        s += pl(V.map(o => tf([-58, 0], o)).concat([tf([-50, -30], K)]), "var(--acc)", 12, 'opacity=".18"') + pl([tf([6, -16], K), tf([52, 0], V[3]), tf([60, 0], V[0]), [214, 352]], "var(--acc)", 7, 'opacity=".3"');
+        s += ghost(G, 0) + skull(K) + V.map((o, i) => vert(i, o)).join("");
+        s += pl(V.slice(0, 6).map(spin).concat([tf([-36, -14], K)]), "var(--mute)", 1.5, 'stroke-dasharray="3 3"');
+        const m1 = spin(V[5]), m2 = tf([-40, -16], K);
+        s += pl([m1, m2], "var(--acc)", 6, 'opacity=".7"');
+        s += pl(V.map(o => tf([-12, 0], o)).concat([tf([-8, -30], K), tf([-4, -58], K)]), CD, 7);
+        s += pl(V.slice(1, 6).map(o => tf([7, 0], o)).concat([tf([7, -8], V[6]), tf([-18, -16], V[6]), tf([-16, -30], K), tf([-6, -44], K)]), ca, 3);
+        const vg = V.map(o => tf([32, 0], o)).concat([tf([32, -10], V[6]), tf([26, -22], K)]);
+        s += pl(vg, "var(--vago)", 12, 'opacity=".18"') + pl(vg, cv, 3.5);
+        const tx = (q, x, fs) => `<text x="${q[0].toFixed(1)}" y="${q[1].toFixed(1)}" font-size="${fs}" fill="var(--mute)">${x}</text>`;
+        s += V.map((o, i) => tx(tf([-62, 4], o), "C" + (7 - i), 10)).join("") + tx(tf([88, 6], V[1]), "Tráquea y esófago", 9) + tx(tf([-40, -38], K), "Cerebelo", 9);
+        if (mv === "flex" && a > 20) {
+            s += `<circle cx="${tf([-10, 0], V[4])[0].toFixed(1)}" cy="${tf([-10, 0], V[4])[1].toFixed(1)}" r="12" fill="var(--cmp)" opacity="0.3"/><text x="${tf([-10, 0], V[4])[0].toFixed(1)}" y="${tf([-10, 0], V[4])[1].toFixed(1)}" text-anchor="middle" font-size="9" fill="white" font-weight="bold">!</text>`;
+        }
+        H = [[0, tf([32, -8], V[6]), 0, "r"], [1, tf([-14, -14], V[6]), 90, "l"], [2, tf([8, -34], V[5]), 0, "r"], [3, tf([-12, 0], V[3]), 0, "l"], [4, tf([4, -20], V[3]), 0, "r"], [5, spin(V[1]), 0, "l"], [6, [(m1[0] + m2[0]) / 2, (m1[1] + m2[1]) / 2], 90, "l"]];
+    } else if (m.v === "top") {
+        const r = (side === "der" ? 1 : -1) * deg, cx = 160, cy = 172, rp = (x, y) => tf({ x: cx, y: cy, a: r }, [x - cx, y - cy]);
+        const ax = side === "der" ? 102 : 218, vx = side === "der" ? 88 : 232;
+        s += `<ellipse cx="160" cy="192" rx="58" ry="70" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="4 4" opacity=".5"/>`;
+        s += `<ellipse cx="160" cy="205" rx="78" ry="52" fill="var(--line)" opacity=".6"/><ellipse cx="160" cy="168" rx="11" ry="17" fill="var(--bone)" stroke="var(--mute)" stroke-width="1.5"/>`;
+        s += `<circle cx="160" cy="224" r="14" fill="${CD}"/>`;
+        s += `<g transform="rotate(${r} ${cx} ${cy})"><ellipse cx="160" cy="192" rx="58" ry="70" fill="none" stroke="var(--bone)" stroke-width="16"/><ellipse cx="160" cy="192" rx="66" ry="78" fill="none" stroke="var(--mute)" stroke-width="1.5"/><ellipse cx="160" cy="192" rx="50" ry="62" fill="none" stroke="var(--mute)" stroke-width="1.5"/><line x1="112" y1="190" x2="208" y2="190" stroke="var(--str)" stroke-width="4"/><circle cx="102" cy="196" r="6" fill="${ca}"/><circle cx="218" cy="196" r="6" fill="${ca}"/><path d="M160 84 l-9 16 h18z" fill="var(--acc)"/></g>`;
+        s += `<circle cx="88" cy="140" r="14" fill="var(--vago)" opacity=".18"/><circle cx="232" cy="140" r="14" fill="var(--vago)" opacity=".18"/><circle cx="88" cy="140" r="7" fill="${side === "izq" ? cv : "var(--vago)"}"/><circle cx="232" cy="140" r="7" fill="${side === "der" ? cv : "var(--vago)"}"/>`;
+        s += `<text x="160" y="40" text-anchor="middle" font-size="11" fill="var(--mute)">Frente</text><text x="160" y="318" text-anchor="middle" font-size="11" fill="var(--mute)">Espalda</text><text x="160" y="340" text-anchor="middle" font-size="11" fill="var(--mute)">Anillo de C1 girando alrededor de C2</text>`;
+        H = [[0, [vx, 140]], [1, rp(ax, 196)], [2, [160, 168]], [3, [160, 224]], [5, rp(160, 190)]];
+    } else {
+        const sg = side === "der" ? -1 : 1, t = sg * deg;
+        const { V, S: K } = chain([0, 1, 2, 3, 4, 5, 6].map(i => t * i / 7), t);
+        s += ghost(G, 1) + skull(K, 1);
+        s += pl(V.map(o => tf([0, 0], o)).concat([tf([0, -40], K)]), CD, 7);
+        s += V.map((o, i) => vertF(i, o)).join("");
+        for (const e of [-1, 1]) {
+            for (let i = 0; i < 4; i++) s += pl([tf([e * 16, -GAP[i] / 2], V[i]), tf([e * 52, -GAP[i] / 2 + 8], V[i])], "var(--acc)", 2.5);
+            s += pl(V.slice(1, 6).map(o => tf([e * 22, 0], o)).concat([tf([e * 30, -4], V[6]), tf([e * 14, -26], K)]), ca, 3);
+            const vg = V.map(o => tf([e * 44, 0], o)).concat([tf([e * 36, -24], K)]);
+            s += pl(vg, "var(--vago)", 10, 'opacity=".18"') + pl(vg, cv, 3);
+        }
+        H = [[0, tf([-sg * 44, 0], V[4])], [1, tf([sg * 22, 0], V[5])], [2, tf([0, -14], V[6])], [3, tf([0, 0], V[3])], [4, tf([sg * 40, -GAP[3] / 2], V[3])], [5, tf([-sg * 14, -10], V[6])], [6, tf([-sg * 40, -20], V[4])]];
+    }
+    s += H.map(([i, p, an, l]) => st[i] ? mark(i, p, st[i], an || 0, l) : "").join("");
+    $("fig").innerHTML = s;
+}
+
+function poseSummary() {
+    const p = [];
+    if (V0.fe > 0) p.push("flexión"); else if (V0.fe < 0) p.push("extensión");
+    if (V0.prot > 0) p.push("adelantamiento"); else if (V0.prot < 0) p.push("retracción");
+    if (V0[hk] > 0) p.push(hk === "rot" ? "rotación derecha" : "inclinación derecha"); else if (V0[hk] < 0) p.push(hk === "rot" ? "rotación izquierda" : "inclinación izquierda");
+    return p.length ? "Movimiento seleccionado: " + p.join(" + ") + "." : "Posición neutra.";
 }
 
 function init3D() {
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf5f7fa); 
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf5f7fa);
 
-  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-  camera.position.set(0, 0, 5.0); 
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 0, 5.0);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  
-  if(loadingMsg) loadingMsg.style.display = 'block';
-  container.appendChild(renderer.domElement);
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-  scene.add(ambientLight);
-  
-  const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
-  keyLight.position.set(5, 5, 5);
-  scene.add(keyLight);
-  
-  const fillLight = new THREE.DirectionalLight(0xffffff, 1.5);
-  fillLight.position.set(-5, 0, 5);
-  scene.add(fillLight);
+    if (loadingMsg) loadingMsg.style.display = 'block';
+    container.appendChild(renderer.domElement);
 
-  const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  backLight.position.set(0, -5, -5);
-  scene.add(backLight);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    scene.add(ambientLight);
 
-  headPivot = new THREE.Group();
-  scene.add(headPivot);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    keyLight.position.set(5, 5, 5);
+    scene.add(keyLight);
 
-  const loader = new OBJLoader();
-  const isGitHubPages = window.location.hostname.includes('github.io');
-  const modelUrl = isGitHubPages 
-    ? `https://${window.location.hostname}/${window.location.pathname.split('/')[1]}/Person002_wrap.obj?v=2` 
-    : './Person002_wrap.obj';
+    const fillLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    fillLight.position.set(-5, 0, 5);
+    scene.add(fillLight);
 
-  console.log("Cargando modelo desde:", modelUrl);
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    backLight.position.set(0, -5, -5);
+    scene.add(backLight);
 
-  loader.load(modelUrl, (object) => {
-    if(loadingMsg) loadingMsg.style.display = 'none';
-    
-    const boxInit = new THREE.Box3().setFromObject(object);
-    const sizeInit = boxInit.getSize(new THREE.Vector3());
-    const maxDim = Math.max(sizeInit.x, sizeInit.y, sizeInit.z);
-    const scaleFactor = 2.5 / maxDim;
-    object.scale.setScalar(scaleFactor);
+    headPivot = new THREE.Group();
+    scene.add(headPivot);
 
-    const boxScaled = new THREE.Box3().setFromObject(object);
-    const centerScaled = boxScaled.getCenter(new THREE.Vector3());
-    object.position.sub(centerScaled);
+    const loader = new OBJLoader();
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    const modelUrl = isGitHubPages
+        ? `https://${window.location.hostname}/${window.location.pathname.split('/')[1]}/Person002_wrap.obj?v=2`
+        : './Person002_wrap.obj';
 
-    object.traverse((child) => {
-      if (child.isMesh) {
-        child.geometry.deleteAttribute('normal');
-        child.geometry = mergeVertices(child.geometry, 1e-4);
-        child.geometry.computeVertexNormals();
-        child.material = new THREE.MeshStandardMaterial({
-          color: 0xebbfae, 
-          roughness: 0.6,
-          metalness: 0.1,
-          side: THREE.DoubleSide,
-          flatShading: false
+    console.log("Cargando modelo desde:", modelUrl);
+
+    loader.load(modelUrl, (object) => {
+        if (loadingMsg) loadingMsg.style.display = 'none';
+
+        const boxInit = new THREE.Box3().setFromObject(object);
+        const sizeInit = boxInit.getSize(new THREE.Vector3());
+        const maxDim = Math.max(sizeInit.x, sizeInit.y, sizeInit.z);
+        const scaleFactor = 2.5 / maxDim;
+        object.scale.setScalar(scaleFactor);
+
+        const boxScaled = new THREE.Box3().setFromObject(object);
+        const centerScaled = boxScaled.getCenter(new THREE.Vector3());
+        object.position.sub(centerScaled);
+
+        object.traverse((child) => {
+            if (child.isMesh) {
+                child.geometry.deleteAttribute('normal');
+                child.geometry = mergeVertices(child.geometry, 1e-4);
+                child.geometry.computeVertexNormals();
+                child.material = new THREE.MeshStandardMaterial({
+                    color: 0xebbfae,
+                    roughness: 0.6,
+                    metalness: 0.1,
+                    side: THREE.DoubleSide,
+                    flatShading: false
+                });
+            }
         });
-      }
-    });
 
-    headPivot.add(object);
-    modelLoaded = true;
-    console.log("Modelo 3D cargado exitosamente.");
-  }, 
-  (xhr) => {
-    if (xhr.total !== 0 && loadingMsg) {
-      const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
-      loadingMsg.textContent = `Cargando modelo 3D... ${percent}%`;
-    }
-  },
-  (err) => {
-    console.error("Error cargando el modelo:", err);
-    if(loadingMsg) loadingMsg.style.display = 'none';
-    const errorDiv = document.createElement('div');
-    errorDiv.style.cssText = 'color: var(--cmp); padding: 20px; text-align: center; font-size: 0.9rem; background: var(--cmpbg); border-radius: 8px; margin: 10px; position:absolute; z-index:2;';
-    errorDiv.innerHTML = `<b>Error al cargar el modelo 3D</b><br>Verifica que el archivo Person002_wrap.obj está en la raíz del repositorio.<br><br><small>URL intentada: ${modelUrl}</small>`;
-    container.appendChild(errorDiv);
-  });
+        headPivot.add(object);
+        modelLoaded = true;
+        console.log("Modelo 3D cargado exitosamente.");
+    },
+        (xhr) => {
+            if (xhr.total !== 0 && loadingMsg) {
+                const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
+                loadingMsg.textContent = `Cargando modelo 3D... ${percent}%`;
+            }
+        },
+        (err) => {
+            console.error("Error cargando el modelo:", err);
+            if (loadingMsg) loadingMsg.style.display = 'none';
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = 'color: var(--cmp); padding: 20px; text-align: center; font-size: 0.9rem; background: var(--cmpbg); border-radius: 8px; margin: 10px; position:absolute; z-index:2;';
+            errorDiv.innerHTML = `<b>Error al cargar el modelo 3D</b><br>Verifica que el archivo Person002_wrap.obj está en la raíz del repositorio.<br><br><small>URL intentada: ${modelUrl}</small>`;
+            container.appendChild(errorDiv);
+        });
 
-  window.addEventListener('resize', onWindowResize);
-  animate();
+    window.addEventListener('resize', onWindowResize);
+    animate();
 }
 
 function onWindowResize() {
-  if(!container.clientWidth) return;
-  camera.aspect = container.clientWidth / container.clientHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(container.clientWidth, container.clientHeight);
+    if (!container.clientWidth) return;
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
 }
 
 function animate() {
-  requestAnimationFrame(animate);
-  
-  if (modelLoaded && headPivot) {
-    const targetRotY = (V0.rot / 100) * (Math.PI / 3); 
-    headPivot.rotation.y += (targetRotY - headPivot.rotation.y) * 0.1; 
+    requestAnimationFrame(animate);
 
-    const targetRotZ = (V0.tilt / 100) * -(Math.PI / 5); 
-    headPivot.rotation.z += (targetRotZ - headPivot.rotation.z) * 0.1;
+    if (modelLoaded && headPivot) {
+        const targetRotY = (V0.rot / 100) * (Math.PI / 3);
+        headPivot.rotation.y += (targetRotY - headPivot.rotation.y) * 0.1;
 
-    const targetRotX = (V0.fe / 100) * (Math.PI / 5);
-    headPivot.rotation.x += (targetRotX - headPivot.rotation.x) * 0.1;
+        const targetRotZ = (V0.tilt / 100) * -(Math.PI / 5);
+        headPivot.rotation.z += (targetRotZ - headPivot.rotation.z) * 0.1;
 
-    const targetPosZ = (V0.prot / 100) * 0.2;
-    headPivot.position.z += (targetPosZ - headPivot.position.z) * 0.1;
-  }
+        const targetRotX = (V0.fe / 100) * (Math.PI / 5);
+        headPivot.rotation.x += (targetRotX - headPivot.rotation.x) * 0.1;
 
-  if(renderer) renderer.render(scene, camera);
+        const targetPosZ = (V0.prot / 100) * 0.2;
+        headPivot.position.z += (targetPosZ - headPivot.position.z) * 0.1;
+    }
+
+    if (renderer) renderer.render(scene, camera);
 }
 
 init3D();
 
-function render(){
-const kk=1,A=acts();syncPad();
-for(const k in AX){const v=V0[k],o=$("o_"+k);
-if(!v)o.textContent="neutra";
-else if(k==="prot")o.textContent=`${Math.abs(v)}% ${v>0?"adelantamiento":"retracción"}`;
-else{const q=k==="fe"?(v>0?"flex":"ext"):k;o.textContent=`${(MOV[q].max*kk*Math.abs(v)/100).toFixed(0)}° ${k==="fe"?(v>0?"flexión":"extensión"):v>0?"a la derecha":"a la izquierda"}`;}}
+function render() {
+    const kk = 1, A = acts();
+    syncPad();
+    for (const k in AX) {
+        const v = V0[k], o = $("o_" + k);
+        if (!v) o.textContent = "neutra";
+        else if (k === "prot") o.textContent = `${Math.abs(v)}% ${v > 0 ? "adelantamiento" : "retracción"}`;
+        else {
+            const q = k === "fe" ? (v > 0 ? "flex" : "ext") : k;
+            o.textContent = `${(MOV[q].max * kk * Math.abs(v) / 100).toFixed(0)}° ${k === "fe" ? (v > 0 ? "flexión" : "extensión") : v > 0 ? "a la derecha" : "a la izquierda"}`;
+        }
+    }
 
-const warningEl = $("clinical-warning");
-if (userConditions.anterolistesis && (V0.fe > 15 || V0.prot > 15)) {
-    warningEl.classList.add("active");
-} else if (!userConditions.anterolistesis && (V0.fe > 15 || V0.prot > 15)) {
-    warningEl.textContent = "⚠️ ATENCIÓN: Movimiento de flexión o adelantamiento elevado. Evita forzar el mentón al pecho.";
-    warningEl.classList.add("active");
-} else {
-    warningEl.classList.remove("active");
+    updateWarning();
+
+    const f = A.find(x => x.k === focus) || A[0] || { mv: "flex", side: "der", a: 0 };
+    mv = f.mv; side = f.side;
+    $("cap").textContent = MOV[mv].cap + (A.length > 1 ? " La figura muestra el último movimiento que tocaste." : "");
+    draw(f.a);
+    const pr = S.map(([n, d], i) => ({ n, i, s: eff(d[mv][0], f.a, n, mv) })).filter(x => x.s > 1);
+    $("pr").innerHTML = f.a < 20 ? "<p style='color:var(--mute);font-size:0.9rem'>No se identifica una compresión: el esquema solo indica carga, tensión o cambio de espacio teórico.</p>" : pr.length ? "<b style='font-size:0.9rem'>Mecanismo hipotético: estructura potencialmente afectada</b>" + pr.map(x => { const g = PA[x.i] ? (PA[x.i][mv] || PA[x.i].def) : ""; return `<div style='padding-left:10px;border-left:3px solid var(--cmp);margin-top:4px;font-size:0.9rem'>${x.n}${g ? " ← " + g : ""}</div>` }).join("") : "";
+
+    const rows = S.map(([n, d], i) => {
+        let b = { s: 0, a: 0, t: "", m: "" }; let first = true;
+        for (const x of A) {
+            const [s0, t] = d[x.mv], s = eff(s0, x.a, n, x.mv);
+            if (first || s > b.s || (s === b.s && x.a > b.a)) {
+                first = false; const I = SN[x.side], C = SN[x.side === "der" ? "izq" : "der"];
+                b = { s, a: x.a, t: t.replaceAll("{I}", I).replaceAll("{C}", C), m: MOV[x.mv].n };
+            }
+        }
+        return { i, n, ...b };
+    }).sort((x, y) => y.s - x.s);
+
+    $("out").innerHTML = rows.map(r => `<div class="struct-item s${r.s}"><div class="struct-header"><div class="struct-title"><span class="struct-num">${r.i + 1}</span>${r.n}</div><span class="tag tag-s${r.s}">${TAGS[r.s]}</span></div><div class="struct-desc">${!A.length || (r.s === 0 && r.a < 20) ? "Cerca de la posición neutra: poca carga." : (A.length > 1 ? `<b>${r.m}:</b> ` : "") + r.t}</div></div>`).join("");
 }
 
-const f=A.find(x=>x.k===focus)||A[0]||{mv:"flex",side:"der",a:0};
-mv=f.mv;side=f.side;$("cap").textContent=MOV[mv].cap+(A.length>1?" La figura muestra el último movimiento que tocaste.":"");
-draw(f.a);
-const pr=S.map(([n,d],i)=>({n,i,s:eff(d[mv][0],f.a,n,mv)})).filter(x=>x.s>1);$("pr").innerHTML=f.a<20?"<p style='color:var(--mute);font-size:0.9rem'>No se identifica una compresión: el esquema solo indica carga, tensión o cambio de espacio teórico.</p>":pr.length?"<b style='font-size:0.9rem'>Mecanismo hipotético: estructura potencialmente afectada</b>"+pr.map(x=>{const g=PA[x.i]?(PA[x.i][mv]||PA[x.i].def):"";return `<div style='padding-left:10px;border-left:3px solid var(--cmp);margin-top:4px;font-size:0.9rem'>${x.n}${g?" ← "+g:""}</div>`}).join(""):"";
+$("sl").addEventListener("input", e => { const k = e.target.dataset.k; if (k) { V0[k] = +e.target.value; focus = k; render(); } });
+$("sl").addEventListener("click", e => { if (e.target.id === "rs") { for (const k in V0) { V0[k] = 0; $("r_" + k).value = 0 } focus = "fe"; render(); } });
 
-const rows=S.map(([n,d],i)=>{let b={s:0,a:0,t:"",m:""};let first=true;
-for(const x of A){const [s0,t]=d[x.mv],s=eff(s0,x.a,n,x.mv);
-if(first||s>b.s||(s===b.s&&x.a>b.a)){first=false;const I=SN[x.side],C=SN[x.side==="der"?"izq":"der"];b={s,a:x.a,t:t.replaceAll("{I}",I).replaceAll("{C}",C),m:MOV[x.mv].n};}}
-return{i,n,...b}}).sort((x,y)=>y.s-x.s);
+let drag = false;
+function syncPad() { $("dot").style.left = (50 + V0[hk] / 2) + "%"; $("dot").style.top = (50 + V0.fe / 2) + "%"; for (const k in V0) { const e = $("r_" + k); if (e) e.value = V0[k]; } }
+function padSet(e) { const r = $("pad").getBoundingClientRect(), cl = v => Math.max(-100, Math.min(100, Math.round(v))); const x = cl(((e.clientX - r.left) / r.width - .5) * 200), y = cl(((e.clientY - r.top) / r.height - .5) * 200); V0[hk] = x; V0.fe = y; focus = Math.abs(x) > Math.abs(y) ? hk : "fe"; render(); }
+$("pad").addEventListener("pointerdown", e => { drag = true; try { $("pad").setPointerCapture(e.pointerId) } catch (_) { } padSet(e); });
+$("pad").addEventListener("pointermove", e => { if (drag) padSet(e); });
+$("pad").addEventListener("pointerup", () => { drag = false; });
+$("pad").addEventListener("keydown", e => { const d = { ArrowUp: ["fe", -10], ArrowDown: ["fe", 10], ArrowLeft: [hk, -10], ArrowRight: [hk, 10] }[e.key]; if (d) { e.preventDefault(); V0[d[0]] = Math.max(-100, Math.min(100, V0[d[0]] + d[1])); focus = d[0]; render(); } });
+$("pm").addEventListener("click", e => { const h = e.target.dataset.h; if (h) { hk = h; for (const b of $("pm").children) b.setAttribute("aria-pressed", b.dataset.h === h); focus = h; render(); } });
 
-$("out").innerHTML=rows.map(r=>`<div class="struct-item s${r.s}"><div class="struct-header"><div class="struct-title"><span class="struct-num">${r.i+1}</span>${r.n}</div><span class="tag tag-s${r.s}">${TAGS[r.s]}</span></div><div class="struct-desc">${!A.length||(r.s===0&&r.a<20)?"Cerca de la posición neutra: poca carga.":(A.length>1?`<b>${r.m}:</b> `:"")+r.t}</div></div>`).join("");}
+$("applyCert").addEventListener("click", () => {
+    applyCertValues();
+    render();
+});
 
-$("sl").addEventListener("input",e=>{const k=e.target.dataset.k;if(k){V0[k]=+e.target.value;focus=k;render();}});
-$("sl").addEventListener("click",e=>{if(e.target.id==="rs"){for(const k in V0){V0[k]=0;$("r_"+k).value=0}focus="fe";render();}});
-
-let drag=false;
-function syncPad(){$("dot").style.left=(50+V0[hk]/2)+"%";$("dot").style.top=(50+V0.fe/2)+"%";for(const k in V0){const e=$("r_"+k);if(e)e.value=V0[k];}}
-function padSet(e){const r=$("pad").getBoundingClientRect(),cl=v=>Math.max(-100,Math.min(100,Math.round(v)));
-const x=cl(((e.clientX-r.left)/r.width-.5)*200),y=cl(((e.clientY-r.top)/r.height-.5)*200);
-V0[hk]=x;V0.fe=y;focus=Math.abs(x)>Math.abs(y)?hk:"fe";render();}
-$("pad").addEventListener("pointerdown",e=>{drag=true;try{$("pad").setPointerCapture(e.pointerId)}catch(_){}padSet(e);});
-$("pad").addEventListener("pointermove",e=>{if(drag)padSet(e);});
-$("pad").addEventListener("pointerup",()=>{drag=false;});
-$("pad").addEventListener("keydown",e=>{const d={ArrowUp:["fe",-10],ArrowDown:["fe",10],ArrowLeft:[hk,-10],ArrowRight:[hk,10]}[e.key];if(d){e.preventDefault();V0[d[0]]=Math.max(-100,Math.min(100,V0[d[0]]+d[1]));focus=d[0];render();}});
-$("pm").addEventListener("click",e=>{const h=e.target.dataset.h;if(h){hk=h;for(const b of $("pm").children)b.setAttribute("aria-pressed",b.dataset.h===h);focus=h;render();}});
+$("resetCert").addEventListener("click", () => {
+    $("cert_flex").value = "";
+    $("cert_ext").value = "";
+    $("cert_rot").value = "";
+    $("cert_tilt").value = "";
+    MOV.flex.max = DEFAULT_MOV.flex.max;
+    MOV.ext.max = DEFAULT_MOV.ext.max;
+    MOV.rot.max = DEFAULT_MOV.rot.max;
+    MOV.tilt.max = DEFAULT_MOV.tilt.max;
+    certApplied = false;
+    const statusEl = $("certStatus");
+    statusEl.textContent = "Usando valores por defecto";
+    statusEl.className = "cert-status active default";
+    updateWarning();
+    render();
+});
 
 sliders();
+applyCertValues();
 render();
 </script>
 </body>
