@@ -57,7 +57,6 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 
 .cap{font-size:0.85rem;color:var(--mute);margin:6px 0}
 
-/* Upload de certificados */
 .upload-section{margin:16px 0;padding:16px;background:var(--bg);border-radius:8px;border:2px dashed var(--line)}
 .upload-section h3{margin-top:0;font-size:0.95rem}
 .upload-section p{font-size:0.85rem;color:var(--mute);margin-bottom:12px}
@@ -78,6 +77,7 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 .extract-status.processing{display:block;background:var(--acc-light);color:var(--acc);border-left:3px solid var(--acc)}
 .extract-status.success{display:block;background:var(--green-bg);color:var(--green);border-left:3px solid var(--green)}
 .extract-status.error{display:block;background:var(--cmpbg);color:var(--cmp);border-left:3px solid var(--cmp)}
+.extract-status.warning{display:block;background:var(--strbg);color:var(--str);border-left:3px solid var(--str)}
 
 .detected-conditions{margin-top:12px;padding:12px;background:var(--card);border-left:3px solid var(--acc);border-radius:6px}
 .detected-conditions h4{margin:0 0 8px;font-size:0.9rem;color:var(--acc)}
@@ -150,7 +150,6 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
     <div class="card">
       <h2>Controles</h2>
       
-      <!-- Sección de subida de certificados -->
       <div class="upload-section">
         <h3>📄 Subir certificados médicos</h3>
         <p>Sube resonancias, radiografías o informes médicos (PDF o imágenes). El sistema detectará automáticamente tus condiciones.</p>
@@ -242,102 +241,121 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 </div>
 </main>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-  }
-}
-</script>
-
 <script>
-// Configurar PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let uploadedFiles = [];
 let extractedText = '';
 
+function setStatus(type, message) {
+    const statusEl = document.getElementById('extractStatus');
+    statusEl.className = 'extract-status ' + type;
+    statusEl.textContent = message;
+    statusEl.style.display = 'block';
+}
+
+function hideStatus() {
+    const statusEl = document.getElementById('extractStatus');
+    statusEl.style.display = 'none';
+}
+
 async function handleFileUpload(event) {
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
 
-    const statusEl = document.getElementById('extractStatus');
     const fileLabel = document.getElementById('fileLabel');
     
     files.forEach(file => {
         uploadedFiles.push(file);
     });
 
-    // Actualizar UI
     updateFileList();
-    fileLabel.textContent = `${uploadedFiles.length} archivo(s) seleccionado(s)`;
+    fileLabel.textContent = uploadedFiles.length + ' archivo(s) seleccionado(s)';
     fileLabel.classList.add('has-files');
 
-    // Extraer texto de los archivos
-    statusEl.className = 'extract-status processing';
-    statusEl.textContent = '⏳ Procesando documentos...';
-    statusEl.style.display = 'block';
+    setStatus('processing', '⏳ Procesando documentos...');
 
     extractedText = '';
-    for (const file of uploadedFiles) {
-        try {
-            if (file.type === 'application/pdf') {
-                const text = await extractTextFromPDF(file);
-                extractedText += text + '\n';
-            } else if (file.type.startsWith('image/')) {
-                // Para imágenes, usamos OCR básico (simulado - en producción usar Tesseract.js)
-                const text = await extractTextFromImage(file);
-                extractedText += text + '\n';
-            }
-        } catch (error) {
-            console.error(`Error procesando ${file.name}:`, error);
-        }
-    }
+    let processedCount = 0;
+    let errorCount = 0;
+    let imageCount = 0;
 
-    // Analizar texto extraído
-    analyzeExtractedText();
-    
-    statusEl.className = 'extract-status success';
-    statusEl.textContent = '✓ Documentos procesados correctamente';
+    try {
+        for (const file of uploadedFiles) {
+            try {
+                if (file.type === 'application/pdf') {
+                    const text = await extractTextFromPDF(file);
+                    if (text && text.trim().length > 0) {
+                        extractedText += text + '\n';
+                        processedCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } else if (file.type.startsWith('image/')) {
+                    imageCount++;
+                    processedCount++;
+                }
+            } catch (error) {
+                console.error('Error procesando ' + file.name + ':', error);
+                errorCount++;
+            }
+        }
+
+        if (imageCount > 0) {
+            setStatus('warning', '⚠️ Se detectaron ' + imageCount + ' imagen(es). El OCR básico no está implementado. Por favor, usa configuración manual o sube PDFs con texto seleccionable.');
+            analyzeExtractedText();
+            return;
+        }
+
+        if (errorCount === uploadedFiles.length) {
+            setStatus('error', '❌ No se pudo extraer texto de los archivos. Los PDFs pueden ser escaneados. Usa configuración manual.');
+            return;
+        }
+
+        if (extractedText.trim().length === 0) {
+            setStatus('warning', '⚠️ No se detectó texto en los archivos. Los PDFs pueden ser escaneados. Usa configuración manual.');
+            return;
+        }
+
+        analyzeExtractedText();
+        setStatus('success', '✓ Documentos procesados. Se detectaron condiciones médicas.');
+
+    } catch (error) {
+        console.error('Error general:', error);
+        setStatus('error', '❌ Error al procesar los documentos: ' + error.message);
+    }
 }
 
 async function extractTextFromPDF(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let text = '';
-    
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        text += textContent.items.map(item => item.str).join(' ') + '\n';
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let text = '';
+        
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            text += pageText + '\n';
+        }
+        
+        return text;
+    } catch (error) {
+        console.error('Error extrayendo texto del PDF:', error);
+        throw error;
     }
-    
-    return text;
-}
-
-async function extractTextFromImage(file) {
-    // Simulación - en producción integrar Tesseract.js
-    // Por ahora retornamos texto vacío pero mostramos el proceso
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(''); // OCR no implementado en esta versión
-        }, 1000);
-    });
 }
 
 function analyzeExtractedText() {
     const text = extractedText.toLowerCase();
     const detected = [];
     
-    // Detectar condiciones médicas
     const conditions = {
-        'sed': ['ehlers-danlos', 'ehlers danlos', 'sed', 'hipermovilidad', 'hiperlaxitud', 'síndrome de ehlers'],
+        'sed': ['ehlers-danlos', 'ehlers danlos', 'sed', 'hipermovilidad', 'hiperlaxitud', 'síndrome de ehlers', 'sindrome de ehlers'],
         'anterolistesis': ['anterolistesis', 'listesis', 'espondilolistesis', 'deslizamiento vertebral', 'inestabilidad'],
-        'rectificacion': ['rectificación', 'rectificacion', 'pérdida de lordosis', 'perdida de lordosis', 'enderezamiento cervical']
+        'rectificacion': ['rectificación', 'rectificacion', 'pérdida de lordosis', 'perdida de lordosis', 'enderezamiento cervical', 'rectificación de la lordosis']
     };
 
-    // Verificar cada condición
     if (conditions.sed.some(term => text.includes(term))) {
         document.getElementById('cond_sed').checked = true;
         detected.push('SED o hipermovilidad');
@@ -353,29 +371,28 @@ function analyzeExtractedText() {
         detected.push('Rectificación de la lordosis cervical');
     }
 
-    // Mostrar condiciones detectadas
     const detectedDiv = document.getElementById('detectedConditions');
     const detectedList = document.getElementById('detectedList');
     
     if (detected.length > 0) {
-        detectedList.innerHTML = detected.map(c => `<li>✓ ${c}</li>`).join('');
+        detectedList.innerHTML = detected.map(c => '<li>✓ ' + c + '</li>').join('');
         detectedDiv.style.display = 'block';
-        
-        // Aplicar configuración automáticamente
         handleConditionChange();
     } else {
-        detectedDiv.style.display = 'none';
+        detectedList.innerHTML = '<li>No se detectaron condiciones específicas. Verifica manualmente.</li>';
+        detectedDiv.style.display = 'block';
     }
 }
 
 function updateFileList() {
     const container = document.getElementById('uploadedFiles');
-    container.innerHTML = uploadedFiles.map((file, index) => `
-        <div class="file-item">
-            <span class="file-name">${file.name}</span>
-            <button class="file-remove" onclick="removeFile(${index})">×</button>
-        </div>
-    `).join('');
+    if (uploadedFiles.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    container.innerHTML = uploadedFiles.map((file, index) => 
+        '<div class="file-item"><span class="file-name">' + file.name + '</span><button class="file-remove" onclick="removeFile(' + index + ')">×</button></div>'
+    ).join('');
 }
 
 function removeFile(index) {
@@ -387,8 +404,9 @@ function removeFile(index) {
         fileLabel.textContent = 'Click para seleccionar archivos';
         fileLabel.classList.remove('has-files');
         document.getElementById('detectedConditions').style.display = 'none';
+        hideStatus();
     } else {
-        fileLabel.textContent = `${uploadedFiles.length} archivo(s) seleccionado(s)`;
+        fileLabel.textContent = uploadedFiles.length + ' archivo(s) seleccionado(s)';
     }
 }
 
@@ -399,7 +417,6 @@ function handleConditionChange() {
         rectificacion: document.getElementById('cond_rec').checked
     };
 
-    // Actualizar límites según condiciones
     if (userConditions.anterolistesis) {
         MOV.flex.max = 35;
     } else {
@@ -421,15 +438,19 @@ function updateWarning() {
     warningEl.classList.remove('active');
 
     if (userConditions.anterolistesis) {
-        warningEl.textContent = "️ ATENCIÓN: Tu RX dinámica confirma anterolistesis de C2 sobre C3 y C3 sobre C4 en flexión. Evita forzar el mentón al pecho.";
+        warningEl.textContent = '⚠️ ATENCIÓN: Tu RX dinámica confirma anterolistesis de C2 sobre C3 y C3 sobre C4 en flexión. Evita forzar el mentón al pecho.';
         if (V0.fe > 15 || V0.prot > 15) {
             warningEl.classList.add('active');
         }
     } else if (V0.fe > 15 || V0.prot > 15) {
-        warningEl.textContent = "⚠️ ATENCIÓN: Movimiento de flexión o adelantamiento elevado. Evita forzar el mentón al pecho.";
+        warningEl.textContent = '⚠️ ATENCIÓN: Movimiento de flexión o adelantamiento elevado. Evita forzar el mentón al pecho.';
         warningEl.classList.add('active');
     }
 }
+
+window.handleFileUpload = handleFileUpload;
+window.handleConditionChange = handleConditionChange;
+window.removeFile = removeFile;
 </script>
 
 <script type="module">
@@ -473,7 +494,7 @@ const V0 = { fe: 0, prot: 0, rot: 0, tilt: 0 };
 let focus = "fe";
 
 function sliders() {
-    $("sl").innerHTML = Object.entries(AX).map(([k, x]) => `<div class="ax"><label for="r_${k}">${x.n}: <b id="o_${k}">neutra</b></label><input type="range" id="r_${k}" data-k="${k}" min="-100" max="100" value="${V0[k]}"><div class="ends"><span>${x.l}</span><span>${x.r}</span></div></div>`).join("");
+    $("sl").innerHTML = Object.entries(AX).map(([k, x]) => '<div class="ax"><label for="r_' + k + '">' + x.n + ': <b id="o_' + k + '">neutra</b></label><input type="range" id="r_' + k + '" data-k="' + k + '" min="-100" max="100" value="' + V0[k] + '"><div class="ends"><span>' + x.l + '</span><span>' + x.r + '</span></div></div>').join("");
 }
 
 function acts() {
@@ -487,7 +508,7 @@ function acts() {
 
 const R = Math.PI / 180, CD = "#d8b84e", GAP = [29, 28, 27, 26, 25, 20];
 const tf = (p, o) => { const c = Math.cos(o.a * R), s = Math.sin(o.a * R); return [o.x + p[0] * c - p[1] * s, o.y + p[0] * s + p[1] * c]; };
-const pl = (P, c, w, x = "") => `<polyline points="${P.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" ${x}/>`;
+const pl = (P, c, w, x = "") => '<polyline points="' + P.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ") + '" fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round" ' + x + '/>';
 
 function chain(ang, sk) {
     const V = [{ x: 150, y: 335, a: ang[0] }];
@@ -495,31 +516,31 @@ function chain(ang, sk) {
     return { V, S: { x: V[6].x, y: V[6].y, a: sk } };
 }
 
-const gt = o => `<g transform="translate(${o.x.toFixed(1)},${o.y.toFixed(1)}) rotate(${o.a.toFixed(1)})" fill="var(--bone)" stroke="var(--mute)" stroke-width="1.5">`;
+const gt = o => '<g transform="translate(' + o.x.toFixed(1) + ',' + o.y.toFixed(1) + ') rotate(' + o.a.toFixed(1) + ')" fill="var(--bone)" stroke="var(--mute)" stroke-width="1.5">';
 
 function vert(i, o) {
     let g = gt(o);
-    if (i < 6) g += `<rect x="-4" y="${-GAP[i] + 10}" width="22" height="${GAP[i] - 20}" rx="3" fill="var(--line)" stroke="none"/>`;
-    if (i < 6) g += `<rect x="-4" y="-10" width="22" height="20" rx="5"/><rect x="-22" y="-9" width="19" height="4" rx="2"/><rect x="-27" y="-7" width="6" height="17" rx="3"/><path d="M-24 -3 L-48 8 L-24 9Z"/>` + (i > 0 ? `<circle cx="7" cy="0" r="4" fill="var(--card)"/>` : "");
-    if (i === 5) g += `<path d="M0 -10 L4 -31 L11 -31 L14 -10Z"/>`;
-    if (i === 6) g += `<ellipse cx="11" cy="-2" rx="4" ry="8"/><ellipse cx="-18" cy="-2" rx="5" ry="9"/><rect x="-6" y="-9" width="14" height="14" rx="4"/>`;
-    return g + `</g>`;
+    if (i < 6) g += '<rect x="-4" y="' + (-GAP[i] + 10) + '" width="22" height="' + (GAP[i] - 20) + '" rx="3" fill="var(--line)" stroke="none"/>';
+    if (i < 6) g += '<rect x="-4" y="-10" width="22" height="20" rx="5"/><rect x="-22" y="-9" width="19" height="4" rx="2"/><rect x="-27" y="-7" width="6" height="17" rx="3"/><path d="M-24 -3 L-48 8 L-24 9Z"/>' + (i > 0 ? '<circle cx="7" cy="0" r="4" fill="var(--card)"/>' : "");
+    if (i === 5) g += '<path d="M0 -10 L4 -31 L11 -31 L14 -10Z"/>';
+    if (i === 6) g += '<ellipse cx="11" cy="-2" rx="4" ry="8"/><ellipse cx="-18" cy="-2" rx="5" ry="9"/><rect x="-6" y="-9" width="14" height="14" rx="4"/>';
+    return g + '</g>';
 }
 
 function vertF(i, o) {
     let g = gt(o);
-    if (i < 6) g += `<rect x="-16" y="${-GAP[i] + 10}" width="32" height="${GAP[i] - 20}" fill="var(--line)" stroke="none"/>`;
-    return g + `<rect x="-16" y="-10" width="32" height="20" rx="4"/><rect x="${i === 6 ? -36 : -30}" y="-4" width="${i === 6 ? 72 : 60}" height="8" rx="3"/></g>`;
+    if (i < 6) g += '<rect x="-16" y="' + (-GAP[i] + 10) + '" width="32" height="' + (GAP[i] - 20) + '" fill="var(--line)" stroke="none"/>';
+    return g + '<rect x="-16" y="-10" width="32" height="20" rx="4"/><rect x="' + (i === 6 ? -36 : -30) + '" y="-4" width="' + (i === 6 ? 72 : 60) + '" height="8" rx="3"/></g>';
 }
 
 const SK = "M-40 -8 C-78 -30 -76 -110 -20 -130 C30 -144 80 -120 84 -82 L88 -70 L102 -52 L92 -48 L94 -40 L89 -32 L92 -22 L84 -6 L40 -2 L24 -12 L6 -14Z", JW = "", BR = '<ellipse cx="14" cy="-84" rx="52" ry="38" fill="#e7a9b8" fill-opacity=".35" stroke="none"/><ellipse cx="-30" cy="-44" rx="26" ry="17" fill="#b08fd0" fill-opacity=".45" stroke="none"/>';
 
 function skull(K, fr, gh) {
     const f = gh ? 'fill="none"' : 'fill="var(--bone)" stroke="var(--mute)" stroke-width="2"';
-    return `<g transform="translate(${K.x.toFixed(1)},${K.y.toFixed(1)}) rotate(${K.a.toFixed(1)})" ${f}>` + (fr ? `<ellipse cx="0" cy="-42" rx="40" ry="44"/><path d="M-22 -4 Q0 12 22 -4"/>` : `<path d="${SK}"/>` + (gh ? "" : BR) + `<ellipse cx="6" cy="-46" rx="6" ry="10"/><circle cx="64" cy="-72" r="2.5" fill="var(--mute)"/>`) + `</g>`;
+    return '<g transform="translate(' + K.x.toFixed(1) + ',' + K.y.toFixed(1) + ') rotate(' + K.a.toFixed(1) + ')" ' + f + '>' + (fr ? '<ellipse cx="0" cy="-42" rx="40" ry="44"/><path d="M-22 -4 Q0 12 22 -4"/>' : '<path d="' + SK + '"/>' + (gh ? "" : BR) + '<ellipse cx="6" cy="-46" rx="6" ry="10"/><circle cx="64" cy="-72" r="2.5" fill="var(--mute)"/>') + '</g>';
 }
 
-const ghost = (G, f) => `<g opacity=".5" stroke="var(--mute)" stroke-width="1.5" fill="none">${pl(G.V.map(o => [o.x, o.y]).concat([[G.S.x, G.S.y]]), "var(--mute)", 1.5, 'stroke-dasharray="4 4"')}${skull(G.S, f, 1)}</g>`;
+const ghost = (G, f) => '<g opacity=".5" stroke="var(--mute)" stroke-width="1.5" fill="none">' + pl(G.V.map(o => [o.x, o.y]).concat([[G.S.x, G.S.y]]), "var(--mute)", 1.5, 'stroke-dasharray="4 4"') + skull(G.S, f, 1) + '</g>';
 
 const PA = {
     0: { rot: "C1 y apófisis estiloides", tilt: "músculos del cuello" },
@@ -533,10 +554,10 @@ const NS = ["Nervio vago", "Arteria vertebral", "Tronco encefálico", "Médula",
 
 const mark = (i, p, v, an, l) => {
     const c = v > 1 ? "var(--cmp)" : "var(--str)", x = p[0].toFixed(1), y = p[1].toFixed(1);
-    const ar = v > 1 ? [0, 180].map(d => { const q = (an + d) * R, f = (r) => [(p[0] + Math.cos(q) * r).toFixed(1), (p[1] + Math.sin(q) * r).toFixed(1)], a = f(24), b = f(13); return `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${c}" stroke-width="3" marker-end="url(#ar)"/>` }).join("") : "";
+    const ar = v > 1 ? [0, 180].map(d => { const q = (an + d) * R, f = (r) => [(p[0] + Math.cos(q) * r).toFixed(1), (p[1] + Math.sin(q) * r).toFixed(1)], a = f(24), b = f(13); return '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="' + c + '" stroke-width="3" marker-end="url(#ar)"/>'; }).join("") : "";
     const ag = v > 1 && PA[i] ? (PA[i][mv] || PA[i].def || "") : "";
-    const tl = l ? `<text x="${l === "l" ? p[0] - 15 : p[0] + 15}" y="${(p[1] + 4).toFixed(1)}" text-anchor="${l === "l" ? "end" : "start"}" font-size="10" font-weight="700" fill="var(--ink)" stroke="var(--card)" stroke-width="3" paint-order="stroke">${NS[i]}</text>` + (ag ? `<text x="${l === "l" ? p[0] - 15 : p[0] + 15}" y="${(p[1] + 15).toFixed(1)}" text-anchor="${l === "l" ? "end" : "start"}" font-size="9" fill="var(--cmp)" stroke="var(--card)" stroke-width="3" paint-order="stroke">contra ${ag}</text>` : "") : "";
-    return `<g class="mk${v}">${ar}<circle cx="${x}" cy="${y}" r="10" fill="${c}" fill-opacity=".3" stroke="${c}" stroke-width="2"/><text x="${x}" y="${(p[1] + 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink)">${i + 1}</text>${tl}</g>`;
+    const tl = l ? '<text x="' + (l === "l" ? p[0] - 15 : p[0] + 15) + '" y="' + (p[1] + 4).toFixed(1) + '" text-anchor="' + (l === "l" ? "end" : "start") + '" font-size="10" font-weight="700" fill="var(--ink)" stroke="var(--card)" stroke-width="3" paint-order="stroke">' + NS[i] + '</text>' + (ag ? '<text x="' + (l === "l" ? p[0] - 15 : p[0] + 15) + '" y="' + (p[1] + 15).toFixed(1) + '" text-anchor="' + (l === "l" ? "end" : "start") + '" font-size="9" fill="var(--cmp)" stroke="var(--card)" stroke-width="3" paint-order="stroke">contra ' + ag + '</text>' : "") : "";
+    return '<g class="mk' + v + '">' + ar + '<circle cx="' + x + '" cy="' + y + '" r="10" fill="' + c + '" fill-opacity=".3" stroke="' + c + '" stroke-width="2"/><text x="' + x + '" y="' + (p[1] + 4).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink)">' + (i + 1) + '</text>' + tl + '</g>';
 };
 
 function eff(s, a, n, q) { if (a < 20) return 0; return s; }
@@ -552,7 +573,7 @@ function draw(a) {
         const PR = [0, 8, 16, 18, 10, -8, -20], ang = PR.map((v, i) => p * v + t * i / 7);
         const { V, S: K } = chain(ang, t - 26 * p), spin = o => tf([-45, 6], o);
         const skin = [...V].reverse().map(o => tf([-66, 0], o)).concat([[70, 362], [60, 380], [250, 380], [238, 358]], V.slice(0, 6).map(o => tf([74, 0], o)), [tf([56, 2], K)]);
-        s += `<polygon points="${skin.map(q => q[0].toFixed(1) + "," + q[1].toFixed(1)).join(" ")}" fill="var(--ok)" fill-opacity=".6" stroke="var(--line)"/>`;
+        s += '<polygon points="' + skin.map(q => q[0].toFixed(1) + "," + q[1].toFixed(1)).join(" ") + '" fill="var(--ok)" fill-opacity=".6" stroke="var(--line)"/>';
         s += pl(V.slice(0, 6).map(o => tf([46, 0], o)), "#d98a8a", 8, 'opacity=".55"') + pl(V.slice(0, 3).map(o => tf([64, 0], o)), "#7fb3c8", 14, 'opacity=".55"');
         s += pl(V.map(o => tf([-58, 0], o)).concat([tf([-50, -30], K)]), "var(--acc)", 12, 'opacity=".18"') + pl([tf([6, -16], K), tf([52, 0], V[3]), tf([60, 0], V[0]), [214, 352]], "var(--acc)", 7, 'opacity=".3"');
         s += ghost(G, 0) + skull(K) + V.map((o, i) => vert(i, o)).join("");
@@ -563,21 +584,21 @@ function draw(a) {
         s += pl(V.slice(1, 6).map(o => tf([7, 0], o)).concat([tf([7, -8], V[6]), tf([-18, -16], V[6]), tf([-16, -30], K), tf([-6, -44], K)]), ca, 3);
         const vg = V.map(o => tf([32, 0], o)).concat([tf([32, -10], V[6]), tf([26, -22], K)]);
         s += pl(vg, "var(--vago)", 12, 'opacity=".18"') + pl(vg, cv, 3.5);
-        const tx = (q, x, fs) => `<text x="${q[0].toFixed(1)}" y="${q[1].toFixed(1)}" font-size="${fs}" fill="var(--mute)">${x}</text>`;
+        const tx = (q, x, fs) => '<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" font-size="' + fs + '" fill="var(--mute)">' + x + '</text>';
         s += V.map((o, i) => tx(tf([-62, 4], o), "C" + (7 - i), 10)).join("") + tx(tf([88, 6], V[1]), "Tráquea y esófago", 9) + tx(tf([-40, -38], K), "Cerebelo", 9);
         if (mv === "flex" && a > 20) {
-            s += `<circle cx="${tf([-10, 0], V[4])[0].toFixed(1)}" cy="${tf([-10, 0], V[4])[1].toFixed(1)}" r="12" fill="var(--cmp)" opacity="0.3"/><text x="${tf([-10, 0], V[4])[0].toFixed(1)}" y="${tf([-10, 0], V[4])[1].toFixed(1)}" text-anchor="middle" font-size="9" fill="white" font-weight="bold">!</text>`;
+            s += '<circle cx="' + tf([-10, 0], V[4])[0].toFixed(1) + '" cy="' + tf([-10, 0], V[4])[1].toFixed(1) + '" r="12" fill="var(--cmp)" opacity="0.3"/><text x="' + tf([-10, 0], V[4])[0].toFixed(1) + '" y="' + tf([-10, 0], V[4])[1].toFixed(1) + '" text-anchor="middle" font-size="9" fill="white" font-weight="bold">!</text>';
         }
         H = [[0, tf([32, -8], V[6]), 0, "r"], [1, tf([-14, -14], V[6]), 90, "l"], [2, tf([8, -34], V[5]), 0, "r"], [3, tf([-12, 0], V[3]), 0, "l"], [4, tf([4, -20], V[3]), 0, "r"], [5, spin(V[1]), 0, "l"], [6, [(m1[0] + m2[0]) / 2, (m1[1] + m2[1]) / 2], 90, "l"]];
     } else if (m.v === "top") {
         const r = (side === "der" ? 1 : -1) * deg, cx = 160, cy = 172, rp = (x, y) => tf({ x: cx, y: cy, a: r }, [x - cx, y - cy]);
         const ax = side === "der" ? 102 : 218, vx = side === "der" ? 88 : 232;
-        s += `<ellipse cx="160" cy="192" rx="58" ry="70" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="4 4" opacity=".5"/>`;
-        s += `<ellipse cx="160" cy="205" rx="78" ry="52" fill="var(--line)" opacity=".6"/><ellipse cx="160" cy="168" rx="11" ry="17" fill="var(--bone)" stroke="var(--mute)" stroke-width="1.5"/>`;
-        s += `<circle cx="160" cy="224" r="14" fill="${CD}"/>`;
-        s += `<g transform="rotate(${r} ${cx} ${cy})"><ellipse cx="160" cy="192" rx="58" ry="70" fill="none" stroke="var(--bone)" stroke-width="16"/><ellipse cx="160" cy="192" rx="66" ry="78" fill="none" stroke="var(--mute)" stroke-width="1.5"/><ellipse cx="160" cy="192" rx="50" ry="62" fill="none" stroke="var(--mute)" stroke-width="1.5"/><line x1="112" y1="190" x2="208" y2="190" stroke="var(--str)" stroke-width="4"/><circle cx="102" cy="196" r="6" fill="${ca}"/><circle cx="218" cy="196" r="6" fill="${ca}"/><path d="M160 84 l-9 16 h18z" fill="var(--acc)"/></g>`;
-        s += `<circle cx="88" cy="140" r="14" fill="var(--vago)" opacity=".18"/><circle cx="232" cy="140" r="14" fill="var(--vago)" opacity=".18"/><circle cx="88" cy="140" r="7" fill="${side === "izq" ? cv : "var(--vago)"}"/><circle cx="232" cy="140" r="7" fill="${side === "der" ? cv : "var(--vago)"}"/>`;
-        s += `<text x="160" y="40" text-anchor="middle" font-size="11" fill="var(--mute)">Frente</text><text x="160" y="318" text-anchor="middle" font-size="11" fill="var(--mute)">Espalda</text><text x="160" y="340" text-anchor="middle" font-size="11" fill="var(--mute)">Anillo de C1 girando alrededor de C2</text>`;
+        s += '<ellipse cx="160" cy="192" rx="58" ry="70" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="4 4" opacity=".5"/>';
+        s += '<ellipse cx="160" cy="205" rx="78" ry="52" fill="var(--line)" opacity=".6"/><ellipse cx="160" cy="168" rx="11" ry="17" fill="var(--bone)" stroke="var(--mute)" stroke-width="1.5"/>';
+        s += '<circle cx="160" cy="224" r="14" fill="' + CD + '"/>';
+        s += '<g transform="rotate(' + r + ' ' + cx + ' ' + cy + ')"><ellipse cx="160" cy="192" rx="58" ry="70" fill="none" stroke="var(--bone)" stroke-width="16"/><ellipse cx="160" cy="192" rx="66" ry="78" fill="none" stroke="var(--mute)" stroke-width="1.5"/><ellipse cx="160" cy="192" rx="50" ry="62" fill="none" stroke="var(--mute)" stroke-width="1.5"/><line x1="112" y1="190" x2="208" y2="190" stroke="var(--str)" stroke-width="4"/><circle cx="102" cy="196" r="6" fill="' + ca + '"/><circle cx="218" cy="196" r="6" fill="' + ca + '"/><path d="M160 84 l-9 16 h18z" fill="var(--acc)"/></g>';
+        s += '<circle cx="88" cy="140" r="14" fill="var(--vago)" opacity=".18"/><circle cx="232" cy="140" r="14" fill="var(--vago)" opacity=".18"/><circle cx="88" cy="140" r="7" fill="' + (side === "izq" ? cv : "var(--vago)") + '"/><circle cx="232" cy="140" r="7" fill="' + (side === "der" ? cv : "var(--vago)") + '"/>';
+        s += '<text x="160" y="40" text-anchor="middle" font-size="11" fill="var(--mute)">Frente</text><text x="160" y="318" text-anchor="middle" font-size="11" fill="var(--mute)">Espalda</text><text x="160" y="340" text-anchor="middle" font-size="11" fill="var(--mute)">Anillo de C1 girando alrededor de C2</text>';
         H = [[0, [vx, 140]], [1, rp(ax, 196)], [2, [160, 168]], [3, [160, 224]], [5, rp(160, 190)]];
     } else {
         const sg = side === "der" ? -1 : 1, t = sg * deg;
@@ -641,7 +662,7 @@ function init3D() {
     const loader = new OBJLoader();
     const isGitHubPages = window.location.hostname.includes('github.io');
     const modelUrl = isGitHubPages
-        ? `https://${window.location.hostname}/${window.location.pathname.split('/')[1]}/Person002_wrap.obj?v=2`
+        ? 'https://' + window.location.hostname + '/' + window.location.pathname.split('/')[1] + '/Person002_wrap.obj?v=2'
         : './Person002_wrap.obj';
 
     console.log("Cargando modelo desde:", modelUrl);
@@ -681,7 +702,7 @@ function init3D() {
         (xhr) => {
             if (xhr.total !== 0 && loadingMsg) {
                 const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
-                loadingMsg.textContent = `Cargando modelo 3D... ${percent}%`;
+                loadingMsg.textContent = 'Cargando modelo 3D... ' + percent + '%';
             }
         },
         (err) => {
@@ -689,7 +710,7 @@ function init3D() {
             if (loadingMsg) loadingMsg.style.display = 'none';
             const errorDiv = document.createElement('div');
             errorDiv.style.cssText = 'color: var(--cmp); padding: 20px; text-align: center; font-size: 0.9rem; background: var(--cmpbg); border-radius: 8px; margin: 10px; position:absolute; z-index:2;';
-            errorDiv.innerHTML = `<b>Error al cargar el modelo 3D</b><br>Verifica que el archivo Person002_wrap.obj está en la raíz del repositorio.<br><br><small>URL intentada: ${modelUrl}</small>`;
+            errorDiv.innerHTML = '<b>Error al cargar el modelo 3D</b><br>Verifica que el archivo Person002_wrap.obj está en la raíz del repositorio.<br><br><small>URL intentada: ' + modelUrl + '</small>';
             container.appendChild(errorDiv);
         });
 
@@ -732,10 +753,10 @@ function render() {
     for (const k in AX) {
         const v = V0[k], o = $("o_" + k);
         if (!v) o.textContent = "neutra";
-        else if (k === "prot") o.textContent = `${Math.abs(v)}% ${v > 0 ? "adelantamiento" : "retracción"}`;
+        else if (k === "prot") o.textContent = Math.abs(v) + '% ' + (v > 0 ? "adelantamiento" : "retracción");
         else {
             const q = k === "fe" ? (v > 0 ? "flex" : "ext") : k;
-            o.textContent = `${(MOV[q].max * kk * Math.abs(v) / 100).toFixed(0)}° ${k === "fe" ? (v > 0 ? "flexión" : "extensión") : v > 0 ? "a la derecha" : "a la izquierda"}`;
+            o.textContent = (MOV[q].max * kk * Math.abs(v) / 100).toFixed(0) + '° ' + (k === "fe" ? (v > 0 ? "flexión" : "extensión") : v > 0 ? "a la derecha" : "a la izquierda");
         }
     }
 
@@ -749,12 +770,12 @@ function render() {
     warningEl.classList.remove('active');
 
     if (userConditions.anterolistesis) {
-        warningEl.textContent = "️ ATENCIÓN: Tu RX dinámica confirma anterolistesis de C2 sobre C3 y C3 sobre C4 en flexión. Evita forzar el mentón al pecho.";
+        warningEl.textContent = '⚠️ ATENCIÓN: Tu RX dinámica confirma anterolistesis de C2 sobre C3 y C3 sobre C4 en flexión. Evita forzar el mentón al pecho.';
         if (V0.fe > 15 || V0.prot > 15) {
             warningEl.classList.add('active');
         }
     } else if (V0.fe > 15 || V0.prot > 15) {
-        warningEl.textContent = "⚠️ ATENCIÓN: Movimiento de flexión o adelantamiento elevado. Evita forzar el mentón al pecho.";
+        warningEl.textContent = '⚠️ ATENCIÓN: Movimiento de flexión o adelantamiento elevado. Evita forzar el mentón al pecho.';
         warningEl.classList.add('active');
     }
 
@@ -763,7 +784,7 @@ function render() {
     $("cap").textContent = MOV[mv].cap + (A.length > 1 ? " La figura muestra el último movimiento que tocaste." : "");
     draw(f.a);
     const pr = S.map(([n, d], i) => ({ n, i, s: eff(d[mv][0], f.a, n, mv) })).filter(x => x.s > 1);
-    $("pr").innerHTML = f.a < 20 ? "<p style='color:var(--mute);font-size:0.9rem'>No se identifica una compresión: el esquema solo indica carga, tensión o cambio de espacio teórico.</p>" : pr.length ? "<b style='font-size:0.9rem'>Mecanismo hipotético: estructura potencialmente afectada</b>" + pr.map(x => { const g = PA[x.i] ? (PA[x.i][mv] || PA[x.i].def) : ""; return `<div style='padding-left:10px;border-left:3px solid var(--cmp);margin-top:4px;font-size:0.9rem'>${x.n}${g ? " ← " + g : ""}</div>` }).join("") : "";
+    $("pr").innerHTML = f.a < 20 ? "<p style='color:var(--mute);font-size:0.9rem'>No se identifica una compresión: el esquema solo indica carga, tensión o cambio de espacio teórico.</p>" : pr.length ? "<b style='font-size:0.9rem'>Mecanismo hipotético: estructura potencialmente afectada</b>" + pr.map(x => { const g = PA[x.i] ? (PA[x.i][mv] || PA[x.i].def) : ""; return '<div style="padding-left:10px;border-left:3px solid var(--cmp);margin-top:4px;font-size:0.9rem">' + x.n + (g ? " ← " + g : "") + '</div>'; }).join("") : "";
 
     const rows = S.map(([n, d], i) => {
         let b = { s: 0, a: 0, t: "", m: "" }; let first = true;
@@ -777,7 +798,7 @@ function render() {
         return { i, n, ...b };
     }).sort((x, y) => y.s - x.s);
 
-    $("out").innerHTML = rows.map(r => `<div class="struct-item s${r.s}"><div class="struct-header"><div class="struct-title"><span class="struct-num">${r.i + 1}</span>${r.n}</div><span class="tag tag-s${r.s}">${TAGS[r.s]}</span></div><div class="struct-desc">${!A.length || (r.s === 0 && r.a < 20) ? "Cerca de la posición neutra: poca carga." : (A.length > 1 ? `<b>${r.m}:</b> ` : "") + r.t}</div></div>`).join("");
+    $("out").innerHTML = rows.map(r => '<div class="struct-item s' + r.s + '"><div class="struct-header"><div class="struct-title"><span class="struct-num">' + (r.i + 1) + '</span>' + r.n + '</div><span class="tag tag-s' + r.s + '">' + TAGS[r.s] + '</span></div><div class="struct-desc">' + (!A.length || (r.s === 0 && r.a < 20) ? "Cerca de la posición neutra: poca carga." : (A.length > 1 ? '<b>' + r.m + ':</b> ' : "") + r.t) + '</div></div>').join("");
 }
 
 $("sl").addEventListener("input", e => { const k = e.target.dataset.k; if (k) { V0[k] = +e.target.value; focus = k; render(); } });
@@ -795,10 +816,10 @@ $("pm").addEventListener("click", e => { const h = e.target.dataset.h; if (h) { 
 sliders();
 render();
 
-// Hacer funciones globales
-window.handleFileUpload = handleFileUpload;
-window.handleConditionChange = handleConditionChange;
-window.removeFile = removeFile;
+window.DEFAULT_MOV = DEFAULT_MOV;
+window.MOV = MOV;
+window.V0 = V0;
+window.render = render;
 </script>
 </body>
 </html>
