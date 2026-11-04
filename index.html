@@ -8,8 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src="https://unpkg.com/three@0.160.0/examples/jsm/loaders/OBJLoader.js"></script>
+<!-- Three.js versión compatible con OBJLoader global -->
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--ink:#1a2b34;--mute:#5a6b75;--line:#d1dce3;--acc:#0d7a84;--acc-light:#e8f4f5;--str:#b87400;--strbg:#fff4dc;--cmp:#c42a1f;--cmpbg:#fde8e6;--ok:#e8eef1;--vago:#7a3fb0;--art:#c2410c;--bone:#d9e2e6;--green:#2d8a4e;--green-bg:#e6f5ec;}
 *{box-sizing:border-box}
@@ -182,7 +183,6 @@ input[type=range]{width:100%;accent-color:var(--acc)}
 </main>
 
 <script>
-// ============ CONFIGURACIÓN GLOBAL ============
 window.DEFAULT_MOV = {
     flex: { n: "Flexión", v: "side", max: 50, cap: "Vista lateral." },
     ext: { n: "Extensión", v: "side", max: 50, cap: "Vista lateral." },
@@ -223,7 +223,6 @@ function setStatus(type, message) {
 
 function $(id) { return document.getElementById(id); }
 
-// ============ UPLOAD DE ARCHIVOS ============
 $('certUpload').addEventListener('change', async function(e) {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -326,7 +325,7 @@ function handleConditionChange() {
         window.MOV.flex.max = window.DEFAULT_MOV.flex.max;
     }
     updateWarning();
-    window.render();
+    render();
 }
 
 function updateWarning() {
@@ -340,7 +339,6 @@ function updateWarning() {
     }
 }
 
-// ============ RENDERIZADO SVG ============
 function acts() {
     const o = [], fe = window.V0.fe;
     if (fe) o.push({ k: "fe", mv: fe > 0 ? "flex" : "ext", side: "der", a: Math.abs(fe) });
@@ -551,10 +549,10 @@ $('pm').addEventListener('click', function(e) {
 sliders();
 window.render();
 
-// ============ THREE.JS (SIN MÓDULOS ES) ============
-console.log('=== INICIALIZANDO THREE.JS ===');
+// ============ THREE.JS CON VERSIÓN COMPATIBLE ============
+console.log('=== INICIANDO THREE.JS ===');
 console.log('THREE disponible:', typeof THREE !== 'undefined');
-console.log('THREE.OBJLoader disponible:', typeof THREE !== 'undefined' && THREE.OBJLoader);
+console.log('THREE.OBJLoader disponible:', typeof THREE.OBJLoader !== 'undefined');
 
 const container = $('webgl-container');
 const loadingMsg = $('loading-msg');
@@ -562,10 +560,6 @@ const loadingMsg = $('loading-msg');
 let scene, camera, renderer, headPivot, modelLoaded = false;
 
 try {
-    if (typeof THREE === 'undefined') {
-        throw new Error('Three.js no se cargó desde el CDN');
-    }
-
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf5f7fa);
 
@@ -587,11 +581,16 @@ try {
     headPivot = new THREE.Group();
     scene.add(headPivot);
 
-    // Cargar modelo con ruta relativa simple
-    const modelUrl = 'Person002_wrap.obj';
-    console.log('Cargando modelo desde:', window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + modelUrl);
+    // Verificar que OBJLoader está disponible
+    if (typeof THREE.OBJLoader === 'undefined') {
+        throw new Error('OBJLoader no está disponible. Verifica que el script de OBJLoader se cargó correctamente.');
+    }
 
     const loader = new THREE.OBJLoader();
+    const modelUrl = './Person002_wrap.obj';
+    
+    console.log('Cargando modelo desde:', modelUrl);
+
     loader.load(
         modelUrl,
         function(object) {
@@ -631,7 +630,7 @@ try {
         function(err) {
             console.error('✗ Error cargando modelo:', err);
             loadingMsg.className = 'error';
-            loadingMsg.innerHTML = '<b>Modelo 3D no disponible</b><br><small>Verifica que <code>Person002_wrap.obj</code> está en la raíz del repositorio.</small>';
+            loadingMsg.innerHTML = '<b>Error al cargar modelo 3D</b><br><small>Verifica que Person002_wrap.obj está en la raíz del repositorio.</small>';
         }
     );
 
@@ -651,7 +650,7 @@ function animate() {
         headPivot.position.z += ((window.V0.prot / 100) * 0.2 - headPivot.position.z) * 0.1;
     }
 
-    if (renderer && scene && camera) renderer.render(scene, camera);
+    renderer.render(scene, camera);
 }
 
 animate();
