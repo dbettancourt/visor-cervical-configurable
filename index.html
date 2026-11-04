@@ -571,18 +571,18 @@ try {
     renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);  // Reducido de 1.2 a 0.6
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);  // Reducido de 1.2 a 0.6
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);  // Reducido de 2.5 a 1.5
+    const keyLight = new THREE.DirectionalLight(0xffffff, 0.8);  // Reducido de 2.5 a 1.5
     keyLight.position.set(5, 5, 5);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xb0c4de, 0.8);  // Luz de relleno azulada
+    const fillLight = new THREE.DirectionalLight(0xb0c4de, 0.4);  // Luz de relleno azulada
     fillLight.position.set(-5, 0, 5);
     scene.add(fillLight);
 
-    const backLight = new THREE.DirectionalLight(0xffffff, 0.5);  // Luz trasera
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);  // Luz trasera
     backLight.position.set(0, -5, -5);
     scene.add(backLight);
 
