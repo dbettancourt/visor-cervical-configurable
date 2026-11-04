@@ -9,7 +9,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src="https://unpkg.com/three@0.160.0/examples/jsm/loaders/OBJLoader.js"></script>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--ink:#1a2b34;--mute:#5a6b75;--line:#d1dce3;--acc:#0d7a84;--acc-light:#e8f4f5;--str:#b87400;--strbg:#fff4dc;--cmp:#c42a1f;--cmpbg:#fde8e6;--ok:#e8eef1;--vago:#7a3fb0;--art:#c2410c;--bone:#d9e2e6;--green:#2d8a4e;--green-bg:#e6f5ec;}
 *{box-sizing:border-box}
@@ -59,8 +58,9 @@ input[type=range]{width:100%;accent-color:var(--acc)}
 .fig-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
 .fig-container{background:var(--bg);border-radius:8px;overflow:hidden;position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;min-height:300px}
 #fig{width:100%;height:100%}
-#webgl-container{width:100%;height:100%;min-height:300px;position:relative}
-#loading-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--mute);font-size:0.9rem;text-align:center}
+#webgl-container{width:100%;height:100%;min-height:300px;position:relative;background:var(--bg)}
+#loading-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--mute);font-size:0.9rem;text-align:center;padding:20px}
+#loading-msg.error{color:var(--cmp);background:var(--cmpbg);border-radius:8px}
 .viz-caption{text-align:center;font-size:0.85rem;color:var(--mute);margin:8px 0}
 .warning-box{background:var(--cmpbg);border:2px solid var(--cmp);border-radius:8px;padding:12px;margin:16px 0;font-weight:700;color:var(--cmp);display:none}
 .warning-box.active{display:block}
@@ -215,7 +215,6 @@ const TAGS = ["Poco cambio", "Estiramiento o carga", "Posible estrechamiento"];
 const SN = { der: "derecho", izq: "izquierdo" };
 const AX = { fe: { n: "Flexión / extensión", l: "Extensión", r: "Flexión" }, prot: { n: "Traslación", l: "Retracción", r: "Adelantamiento" }, rot: { n: "Rotación", l: "Izquierda", r: "Derecha" }, tilt: { n: "Inclinación", l: "Izquierda", r: "Derecha" } };
 
-// Funciones de utilidad
 function setStatus(type, message) {
     const el = document.getElementById('extractStatus');
     if (el) {
@@ -226,7 +225,6 @@ function setStatus(type, message) {
 
 function $(id) { return document.getElementById(id); }
 
-// Upload de archivos
 $('certUpload').addEventListener('change', async function(e) {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -318,7 +316,6 @@ window.removeFile = function(index) {
     }
 };
 
-// Condiciones
 $('cond_sed').addEventListener('change', handleConditionChange);
 $('cond_ant').addEventListener('change', handleConditionChange);
 $('cond_rec').addEventListener('change', handleConditionChange);
@@ -344,7 +341,6 @@ function updateWarning() {
     }
 }
 
-// Renderizado
 function acts() {
     const o = [], fe = window.V0.fe;
     if (fe) o.push({ k: "fe", mv: fe > 0 ? "flex" : "ext", side: "der", a: Math.abs(fe) });
@@ -505,7 +501,6 @@ function syncPad() {
     } 
 }
 
-// Event listeners
 $('sl').addEventListener('input', function(e) { 
     const k = e.target.dataset.k; 
     if (k) { 
@@ -558,86 +553,121 @@ $('pm').addEventListener('click', function(e) {
     } 
 });
 
-// Inicialización
 sliders();
 window.render();
 
-// Three.js
-console.log('Iniciando Three.js...');
+// Three.js con diagnóstico mejorado
+console.log('=== INICIANDO THREE.JS ===');
 const container = $('webgl-container');
 const loadingMsg = $('loading-msg');
 
 let scene, camera, renderer, headPivot, modelLoaded = false;
 
-scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf5f7fa);
+try {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf5f7fa);
 
-camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-camera.position.set(0, 0, 5.0);
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 0, 5.0);
 
-renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setSize(container.clientWidth, container.clientHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-container.appendChild(renderer.domElement);
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-scene.add(ambientLight);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    scene.add(ambientLight);
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
-keyLight.position.set(5, 5, 5);
-scene.add(keyLight);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    keyLight.position.set(5, 5, 5);
+    scene.add(keyLight);
 
-headPivot = new THREE.Group();
-scene.add(headPivot);
+    headPivot = new THREE.Group();
+    scene.add(headPivot);
 
-const loader = new THREE.OBJLoader();
-const isGitHubPages = window.location.hostname.includes('github.io');
-const modelUrl = isGitHubPages
-    ? 'https://' + window.location.hostname + '/' + window.location.pathname.split('/')[1] + '/Person002_wrap.obj?v=2'
-    : './Person002_wrap.obj';
+    // Intentar cargar el modelo
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    const repoName = window.location.pathname.split('/')[1];
+    
+    // Probar múltiples URLs
+    const possibleUrls = [
+        './Person002_wrap.obj',
+        'Person002_wrap.obj',
+        isGitHubPages ? `https://dbettancourt.github.io/visor-cervical-configurable/Person002_wrap.obj` : null,
+        isGitHubPages ? `https://raw.githubusercontent.com/dbettancourt/visor-cervical-configurable/main/Person002_wrap.obj` : null
+    ].filter(url => url !== null);
 
-console.log('Cargando modelo desde:', modelUrl);
+    console.log('URLs a intentar:', possibleUrls);
 
-loader.load(modelUrl, 
-    function(object) {
-        console.log('Modelo cargado');
-        loadingMsg.style.display = 'none';
+    let loaded = false;
+    
+    for (const modelUrl of possibleUrls) {
+        console.log('Intentando cargar desde:', modelUrl);
+        
+        try {
+            const loader = new THREE.OBJLoader();
+            loader.load(
+                modelUrl,
+                function(object) {
+                    console.log('✓ Modelo cargado desde:', modelUrl);
+                    loadingMsg.style.display = 'none';
 
-        const box = new THREE.Box3().setFromObject(object);
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        object.scale.setScalar(2.5 / maxDim);
+                    const box = new THREE.Box3().setFromObject(object);
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    object.scale.setScalar(2.5 / maxDim);
 
-        const box2 = new THREE.Box3().setFromObject(object);
-        const center = box2.getCenter(new THREE.Vector3());
-        object.position.sub(center);
+                    const box2 = new THREE.Box3().setFromObject(object);
+                    const center = box2.getCenter(new THREE.Vector3());
+                    object.position.sub(center);
 
-        object.traverse(function(child) {
-            if (child.isMesh) {
-                child.geometry.computeVertexNormals();
-                child.material = new THREE.MeshStandardMaterial({
-                    color: 0xebbfae,
-                    roughness: 0.6,
-                    metalness: 0.1,
-                    side: THREE.DoubleSide
-                });
-            }
-        });
+                    object.traverse(function(child) {
+                        if (child.isMesh) {
+                            child.geometry.computeVertexNormals();
+                            child.material = new THREE.MeshStandardMaterial({
+                                color: 0xebbfae,
+                                roughness: 0.6,
+                                metalness: 0.1,
+                                side: THREE.DoubleSide
+                            });
+                        }
+                    });
 
-        headPivot.add(object);
-        modelLoaded = true;
-    },
-    function(xhr) {
-        if (xhr.total !== 0) {
-            const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
-            loadingMsg.textContent = 'Cargando... ' + percent + '%';
+                    headPivot.add(object);
+                    modelLoaded = true;
+                    loaded = true;
+                },
+                function(xhr) {
+                    if (xhr.total !== 0) {
+                        const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
+                        loadingMsg.textContent = 'Cargando... ' + percent + '%';
+                    }
+                },
+                function(err) {
+                    console.warn('✗ Error cargando desde', modelUrl, ':', err);
+                }
+            );
+            
+            if (loaded) break;
+        } catch (err) {
+            console.warn('Error con URL', modelUrl, ':', err);
         }
-    },
-    function(err) {
-        console.error('Error cargando modelo:', err);
-        loadingMsg.textContent = 'Error al cargar modelo 3D';
     }
-);
+
+    if (!loaded) {
+        setTimeout(() => {
+            if (!modelLoaded) {
+                loadingMsg.innerHTML = '<b>Modelo 3D no disponible</b><br><small>Verifica que Person002_wrap.obj está en el repositorio</small>';
+                loadingMsg.classList.add('error');
+            }
+        }, 5000);
+    }
+
+} catch (err) {
+    console.error('Error inicializando Three.js:', err);
+    loadingMsg.innerHTML = '<b>Error al inicializar 3D</b><br><small>' + err.message + '</small>';
+    loadingMsg.classList.add('error');
+}
 
 function animate() {
     requestAnimationFrame(animate);
@@ -661,7 +691,7 @@ window.addEventListener('resize', function() {
     renderer.setSize(container.clientWidth, container.clientHeight);
 });
 
-console.log('Inicialización completa');
+console.log('=== INICIALIZACIÓN COMPLETA ===');
 </script>
 </body>
 </html>
