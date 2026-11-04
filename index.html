@@ -550,14 +550,13 @@ $('pm').addEventListener('click', function(e) {
 sliders();
 window.render();
 
-// ============ THREE.JS CON DIAGNÓSTICO PRECISO ============
+// ============ THREE.JS CON MÚLTIPLES NOMBRES DE ARCHIVO ============
 console.log('=== DIAGNÓSTICO MODELO 3D ===');
 const container = $('webgl-container');
 const loadingMsg = $('loading-msg');
 
 let scene, camera, renderer, headPivot, modelLoaded = false;
 
-// Construir URL base correcta
 const currentUrl = window.location.href;
 const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/') + 1);
 const repoPath = window.location.pathname;
@@ -565,23 +564,32 @@ const repoName = repoPath.split('/')[1] || 'visor-cervical-configurable';
 
 console.log('URL actual:', currentUrl);
 console.log('Base URL:', baseUrl);
-console.log('Repo path:', repoPath);
 console.log('Repo name:', repoName);
 
-// Lista de URLs a probar en orden de probabilidad
-const modelUrls = [
-    baseUrl + 'Person002_wrap.obj',
-    './Person002_wrap.obj',
-    'https://dbettancourt.github.io/' + repoName + '/Person002_wrap.obj',
-    'https://raw.githubusercontent.com/dbettancourt/' + repoName + '/main/Person002_wrap.obj',
-    'https://raw.githubusercontent.com/dbettancourt/' + repoName + '/master/Person002_wrap.obj'
+// Múltiples variaciones del nombre del archivo
+const fileNames = [
+    'Person002_wrap.obj',
+    'Person02_wrap.obj',
+    'Person2_wrap.obj',
+    'person002_wrap.obj',
+    'person02_wrap.obj',
+    'Person002_wrap.OBJ',
+    'PERSON002_WRAP.OBJ'
 ];
+
+// Construir URLs con cada nombre de archivo
+const modelUrls = [];
+fileNames.forEach(name => {
+    modelUrls.push(baseUrl + name);
+    modelUrls.push('./' + name);
+    modelUrls.push('https://dbettancourt.github.io/' + repoName + '/' + name);
+    modelUrls.push('https://raw.githubusercontent.com/dbettancourt/' + repoName + '/main/' + name);
+});
 
 console.log('URLs a intentar:', modelUrls);
 
-// Mostrar URL principal en debug
 loadingMsg.className = 'debug';
-loadingMsg.innerHTML = '🔍 Verificando modelo 3D...<br><div class="url-debug">URL principal: <a href="' + modelUrls[0] + '" target="_blank">' + modelUrls[0] + '</a></div>';
+loadingMsg.innerHTML = '🔍 Buscando modelo 3D...<br><small>Probando múltiples nombres de archivo</small>';
 
 try {
     scene = new THREE.Scene();
@@ -605,14 +613,10 @@ try {
     headPivot = new THREE.Group();
     scene.add(headPivot);
 
-    // Probar cada URL secuencialmente con fetch primero
     async function tryLoadModel(urlIndex) {
         if (urlIndex >= modelUrls.length) {
-            // Todas fallaron
             loadingMsg.className = 'error';
-            loadingMsg.innerHTML = '<b>Modelo 3D no disponible</b><br><small>Ninguna URL funcionó. Verifica que el archivo existe en el repositorio.</small><div class="url-debug"><b>URLs intentadas:</b><br>' + 
-                modelUrls.map((u, i) => (i+1) + '. <a href="' + u + '" target="_blank" style="color:var(--cmp)">' + u + '</a>').join('<br>') + 
-                '</div><div class="url-debug" style="margin-top:8px"><b>Solución:</b> Sube el archivo <code>Person002_wrap.obj</code> a la raíz del repositorio en GitHub.</div>';
+            loadingMsg.innerHTML = '<b>Modelo 3D no encontrado</b><br><small>Ninguna URL funcionó. Verifica el nombre exacto del archivo en el repositorio.</small><div class="url-debug"><b>Solución:</b><br>1. Ve a tu repositorio en GitHub<br>2. Haz clic en el archivo .obj<br>3. Copia el nombre EXACTO de la URL<br>4. Renombra el archivo para que coincida con: <code>Person002_wrap.obj</code></div>';
             return;
         }
 
@@ -620,21 +624,21 @@ try {
         console.log('Intentando URL', urlIndex + 1, ':', url);
 
         try {
-            // Primero verificar con fetch
             const response = await fetch(url, { method: 'HEAD' });
             
             if (!response.ok) {
                 console.warn('URL', urlIndex + 1, 'falló:', response.status);
-                loadingMsg.innerHTML = '🔍 Probando URL ' + (urlIndex + 2) + ' de ' + modelUrls.length + '...<br><div class="url-debug">Actual: <a href="' + url + '" target="_blank">' + url + '</a><br>Status: ' + response.status + '</div>';
-                setTimeout(() => tryLoadModel(urlIndex + 1), 500);
+                if (urlIndex % 10 === 0) {
+                    loadingMsg.innerHTML = '🔍 Probando... ' + Math.round((urlIndex / modelUrls.length) * 100) + '%<br><small>URL actual: ' + url.split('/').pop() + '</small>';
+                }
+                setTimeout(() => tryLoadModel(urlIndex + 1), 100);
                 return;
             }
 
-            console.log('✓ URL', urlIndex + 1, 'disponible:', url);
+            console.log('✓ URL encontrada:', url);
             loadingMsg.innerHTML = '⏳ Cargando modelo...';
             loadingMsg.className = '';
 
-            // Cargar con OBJLoader
             const loader = new THREE.OBJLoader();
             loader.load(
                 url,
@@ -679,13 +683,11 @@ try {
                 }
             );
         } catch (fetchError) {
-            console.warn('Fetch error para URL', urlIndex + 1, ':', fetchError);
-            loadingMsg.innerHTML = '🔍 Probando URL ' + (urlIndex + 2) + ' de ' + modelUrls.length + '...<br><div class="url-debug">Error: ' + fetchError.message + '</div>';
-            setTimeout(() => tryLoadModel(urlIndex + 1), 500);
+            console.warn('Fetch error:', fetchError);
+            setTimeout(() => tryLoadModel(urlIndex + 1), 100);
         }
     }
 
-    // Iniciar carga
     tryLoadModel(0);
 
 } catch (err) {
