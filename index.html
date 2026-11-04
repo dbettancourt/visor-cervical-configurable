@@ -59,8 +59,9 @@ input[type=range]{width:100%;accent-color:var(--acc)}
 .fig-container{background:var(--bg);border-radius:8px;overflow:hidden;position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;min-height:300px}
 #fig{width:100%;height:100%}
 #webgl-container{width:100%;height:100%;min-height:300px;position:relative;background:var(--bg)}
-#loading-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--mute);font-size:0.9rem;text-align:center;padding:20px}
-#loading-msg.error{color:var(--cmp);background:var(--cmpbg);border-radius:8px}
+#loading-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--mute);font-size:0.9rem;text-align:center;padding:20px;max-width:90%}
+#loading-msg.error{color:var(--cmp);background:var(--cmpbg);border-radius:8px;border:1px solid var(--cmp)}
+#loading-msg.debug{color:var(--acc);background:var(--acc-light);border-radius:8px;border:1px solid var(--acc);font-size:0.8rem}
 .viz-caption{text-align:center;font-size:0.85rem;color:var(--mute);margin:8px 0}
 .warning-box{background:var(--cmpbg);border:2px solid var(--cmp);border-radius:8px;padding:12px;margin:16px 0;font-weight:700;color:var(--cmp);display:none}
 .warning-box.active{display:block}
@@ -80,6 +81,8 @@ input[type=range]{width:100%;accent-color:var(--acc)}
 .tag-s1{background:var(--strbg);color:var(--str)}
 .tag-s2{background:var(--cmpbg);color:var(--cmp)}
 .struct-desc{font-size:0.85rem;color:var(--mute)}
+.url-debug{font-size:0.75rem;color:var(--mute);margin-top:8px;word-break:break-all;text-align:left}
+.url-debug a{color:var(--acc);text-decoration:underline}
 @media(max-width:1024px){.three-col{grid-template-columns:1fr}.controls-col,.info-col{position:static;max-height:none}.fig-wrap{grid-template-columns:1fr}}
 </style>
 </head>
@@ -181,7 +184,6 @@ input[type=range]{width:100%;accent-color:var(--acc)}
 </main>
 
 <script>
-// Configuración global
 window.DEFAULT_MOV = {
     flex: { n: "Flexión", v: "side", max: 50, cap: "Vista lateral." },
     ext: { n: "Extensión", v: "side", max: 50, cap: "Vista lateral." },
@@ -217,10 +219,7 @@ const AX = { fe: { n: "Flexión / extensión", l: "Extensión", r: "Flexión" },
 
 function setStatus(type, message) {
     const el = document.getElementById('extractStatus');
-    if (el) {
-        el.className = 'extract-status ' + type;
-        el.textContent = message;
-    }
+    if (el) { el.className = 'extract-status ' + type; el.textContent = message; }
 }
 
 function $(id) { return document.getElementById(id); }
@@ -523,13 +522,8 @@ $('sl').addEventListener('click', function(e) {
 });
 
 let drag = false;
-$('pad').addEventListener('pointerdown', function(e) { 
-    drag = true; 
-    padSet(e); 
-});
-$('pad').addEventListener('pointermove', function(e) { 
-    if (drag) padSet(e); 
-});
+$('pad').addEventListener('pointerdown', function(e) { drag = true; padSet(e); });
+$('pad').addEventListener('pointermove', function(e) { if (drag) padSet(e); });
 $('pad').addEventListener('pointerup', function() { drag = false; });
 
 function padSet(e) { 
@@ -556,12 +550,38 @@ $('pm').addEventListener('click', function(e) {
 sliders();
 window.render();
 
-// Three.js con diagnóstico mejorado
-console.log('=== INICIANDO THREE.JS ===');
+// ============ THREE.JS CON DIAGNÓSTICO PRECISO ============
+console.log('=== DIAGNÓSTICO MODELO 3D ===');
 const container = $('webgl-container');
 const loadingMsg = $('loading-msg');
 
 let scene, camera, renderer, headPivot, modelLoaded = false;
+
+// Construir URL base correcta
+const currentUrl = window.location.href;
+const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/') + 1);
+const repoPath = window.location.pathname;
+const repoName = repoPath.split('/')[1] || 'visor-cervical-configurable';
+
+console.log('URL actual:', currentUrl);
+console.log('Base URL:', baseUrl);
+console.log('Repo path:', repoPath);
+console.log('Repo name:', repoName);
+
+// Lista de URLs a probar en orden de probabilidad
+const modelUrls = [
+    baseUrl + 'Person002_wrap.obj',
+    './Person002_wrap.obj',
+    'https://dbettancourt.github.io/' + repoName + '/Person002_wrap.obj',
+    'https://raw.githubusercontent.com/dbettancourt/' + repoName + '/main/Person002_wrap.obj',
+    'https://raw.githubusercontent.com/dbettancourt/' + repoName + '/master/Person002_wrap.obj'
+];
+
+console.log('URLs a intentar:', modelUrls);
+
+// Mostrar URL principal en debug
+loadingMsg.className = 'debug';
+loadingMsg.innerHTML = '🔍 Verificando modelo 3D...<br><div class="url-debug">URL principal: <a href="' + modelUrls[0] + '" target="_blank">' + modelUrls[0] + '</a></div>';
 
 try {
     scene = new THREE.Scene();
@@ -585,31 +605,41 @@ try {
     headPivot = new THREE.Group();
     scene.add(headPivot);
 
-    // Intentar cargar el modelo
-    const isGitHubPages = window.location.hostname.includes('github.io');
-    const repoName = window.location.pathname.split('/')[1];
-    
-    // Probar múltiples URLs
-    const possibleUrls = [
-        './Person002_wrap.obj',
-        'Person002_wrap.obj',
-        isGitHubPages ? `https://dbettancourt.github.io/visor-cervical-configurable/Person002_wrap.obj` : null,
-        isGitHubPages ? `https://raw.githubusercontent.com/dbettancourt/visor-cervical-configurable/main/Person002_wrap.obj` : null
-    ].filter(url => url !== null);
+    // Probar cada URL secuencialmente con fetch primero
+    async function tryLoadModel(urlIndex) {
+        if (urlIndex >= modelUrls.length) {
+            // Todas fallaron
+            loadingMsg.className = 'error';
+            loadingMsg.innerHTML = '<b>Modelo 3D no disponible</b><br><small>Ninguna URL funcionó. Verifica que el archivo existe en el repositorio.</small><div class="url-debug"><b>URLs intentadas:</b><br>' + 
+                modelUrls.map((u, i) => (i+1) + '. <a href="' + u + '" target="_blank" style="color:var(--cmp)">' + u + '</a>').join('<br>') + 
+                '</div><div class="url-debug" style="margin-top:8px"><b>Solución:</b> Sube el archivo <code>Person002_wrap.obj</code> a la raíz del repositorio en GitHub.</div>';
+            return;
+        }
 
-    console.log('URLs a intentar:', possibleUrls);
+        const url = modelUrls[urlIndex];
+        console.log('Intentando URL', urlIndex + 1, ':', url);
 
-    let loaded = false;
-    
-    for (const modelUrl of possibleUrls) {
-        console.log('Intentando cargar desde:', modelUrl);
-        
         try {
+            // Primero verificar con fetch
+            const response = await fetch(url, { method: 'HEAD' });
+            
+            if (!response.ok) {
+                console.warn('URL', urlIndex + 1, 'falló:', response.status);
+                loadingMsg.innerHTML = '🔍 Probando URL ' + (urlIndex + 2) + ' de ' + modelUrls.length + '...<br><div class="url-debug">Actual: <a href="' + url + '" target="_blank">' + url + '</a><br>Status: ' + response.status + '</div>';
+                setTimeout(() => tryLoadModel(urlIndex + 1), 500);
+                return;
+            }
+
+            console.log('✓ URL', urlIndex + 1, 'disponible:', url);
+            loadingMsg.innerHTML = '⏳ Cargando modelo...';
+            loadingMsg.className = '';
+
+            // Cargar con OBJLoader
             const loader = new THREE.OBJLoader();
             loader.load(
-                modelUrl,
+                url,
                 function(object) {
-                    console.log('✓ Modelo cargado desde:', modelUrl);
+                    console.log('✓ Modelo cargado desde:', url);
                     loadingMsg.style.display = 'none';
 
                     const box = new THREE.Box3().setFromObject(object);
@@ -635,7 +665,6 @@ try {
 
                     headPivot.add(object);
                     modelLoaded = true;
-                    loaded = true;
                 },
                 function(xhr) {
                     if (xhr.total !== 0) {
@@ -644,29 +673,25 @@ try {
                     }
                 },
                 function(err) {
-                    console.warn('✗ Error cargando desde', modelUrl, ':', err);
+                    console.error('Error OBJLoader:', err);
+                    loadingMsg.className = 'error';
+                    loadingMsg.innerHTML = '<b>Error al cargar modelo</b><br><small>' + err.message + '</small><div class="url-debug">URL: <a href="' + url + '" target="_blank">' + url + '</a></div>';
                 }
             );
-            
-            if (loaded) break;
-        } catch (err) {
-            console.warn('Error con URL', modelUrl, ':', err);
+        } catch (fetchError) {
+            console.warn('Fetch error para URL', urlIndex + 1, ':', fetchError);
+            loadingMsg.innerHTML = '🔍 Probando URL ' + (urlIndex + 2) + ' de ' + modelUrls.length + '...<br><div class="url-debug">Error: ' + fetchError.message + '</div>';
+            setTimeout(() => tryLoadModel(urlIndex + 1), 500);
         }
     }
 
-    if (!loaded) {
-        setTimeout(() => {
-            if (!modelLoaded) {
-                loadingMsg.innerHTML = '<b>Modelo 3D no disponible</b><br><small>Verifica que Person002_wrap.obj está en el repositorio</small>';
-                loadingMsg.classList.add('error');
-            }
-        }, 5000);
-    }
+    // Iniciar carga
+    tryLoadModel(0);
 
 } catch (err) {
     console.error('Error inicializando Three.js:', err);
-    loadingMsg.innerHTML = '<b>Error al inicializar 3D</b><br><small>' + err.message + '</small>';
-    loadingMsg.classList.add('error');
+    loadingMsg.className = 'error';
+    loadingMsg.innerHTML = '<b>Error Three.js</b><br><small>' + err.message + '</small>';
 }
 
 function animate() {
@@ -691,7 +716,7 @@ window.addEventListener('resize', function() {
     renderer.setSize(container.clientWidth, container.clientHeight);
 });
 
-console.log('=== INICIALIZACIÓN COMPLETA ===');
+console.log('=== DIAGNÓSTICO COMPLETO ===');
 </script>
 </body>
 </html>
