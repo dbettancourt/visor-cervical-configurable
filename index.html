@@ -571,12 +571,20 @@ try {
     renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);  // Reducido de 1.2 a 0.6
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);  // Reducido de 2.5 a 1.5
     keyLight.position.set(5, 5, 5);
     scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xb0c4de, 0.8);  // Luz de relleno azulada
+    fillLight.position.set(-5, 0, 5);
+    scene.add(fillLight);
+
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.5);  // Luz trasera
+    backLight.position.set(0, -5, -5);
+    scene.add(backLight);
 
     headPivot = new THREE.Group();
     scene.add(headPivot);
@@ -610,11 +618,11 @@ try {
                 if (child.isMesh) {
                     child.geometry.computeVertexNormals();
                     child.material = new THREE.MeshStandardMaterial({
-                        color: 0xebbfae,
-                        roughness: 0.6,
-                        metalness: 0.1,
-                        side: THREE.DoubleSide
-                    });
+                    color: 0xd4a574,  // Color piel más oscuro y definido
+                    roughness: 0.7,   // Más rugosidad para mejor definición
+                    metalness: 0.0,   // Sin metalicidad
+                    side: THREE.DoubleSide
+                });
                 }
             });
 
