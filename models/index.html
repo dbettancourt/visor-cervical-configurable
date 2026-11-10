@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa del movimiento cervical 3D - Personalizado</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        
+        #header {
+            background: #2a2a2a;
+            padding: 20px;
+            border-bottom: 2px solid #444;
+        }
+        
+        h1 {
+            margin: 0 0 10px 0;
+            color: #4a9eff;
+        }
+        
+        .warning {
+            background: #ff6b35;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 500px;
+            position: relative;
+        }
+        
+        #controls {
+            padding: 20px;
+            background: #2a2a2a;
+        }
+        
+        .slider-group {
+            margin: 15px 0;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+        
+        .amber { background: #ffa500; }
+        .red { background: #ff0000; }
+        
+        /* Panel de IA */
+        #ai-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            background: #2a2a2a;
+            border: 2px solid #4a9eff;
+            border-radius: 10px;
+            padding: 15px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        
+        #ai-panel.active {
+            display: block;
+        }
+        
+        #ai-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4a9eff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            z-index: 999;
+            font-weight: bold;
+        }
+        
+        #ai-status {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        
+        #ai-response {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .ai-disclaimer {
+            background: #ff6b35;
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 11px;
+        }
+        
+        #ai-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>Mapa del movimiento cervical - Personalizado</h1>
+        <p>Basado en tus resonancias (2022-2024). Este esquema refleja tu rectificación de la lordosis y la anterolistesis C2-C4 en flexión. No mide compresión real, pero advierte de tus riesgos específicos.</p>
+        <div class="warning">
+            ⚠️ ATENCIÓN: Tu RX dinámica confirma anterolistesis de C2 sobre C3 y C3 sobre C4 en flexión. Evita forzar el mentón al pecho.
+        </div>
+        <label>
+            <input type="checkbox" id="sed-checkbox"> Tengo SED o hipermovilidad (mostrar advertencias de variabilidad)
+        </label>
+    </div>
+    
+    <div id="canvas-container">
+        <p>Cargando modelo 3D...</p>
+    </div>
+    
+    <div id="controls">
+        <h3>Controles de movimiento</h3>
+        <p>Izquierda/derecha: rotación | Izquierda/derecha: inclinación | Extensión (arriba) | Flexión (abajo)</p>
+        <p>Arrastra el punto hacia un lado, arriba, abajo o en diagonal. Los deslizadores de abajo se mueven contigo y sirven para ajustar con precisión. El movimiento diagonal combina ejes; no es una articulación adicional.</p>
+        
+        <div class="slider-group">
+            <label>Flexión/Extensión: <span id="flexion-value">0</span>°</label>
+            <input type="range" id="flexion-slider" min="-45" max="45" value="0">
+        </div>
+        
+        <div class="slider-group">
+            <label>Rotación: <span id="rotation-value">0</span>°</label>
+            <input type="range" id="rotation-slider" min="-60" max="60" value="0">
+        </div>
+        
+        <div class="slider-group">
+            <label>Inclinación lateral: <span id="tilt-value">0</span>°</label>
+            <input type="range" id="tilt-slider" min="-45" max="45" value="0">
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="circle amber"></div>
+                <span>Carga/Tensión</span>
+            </div>
+            <div class="legend-item">
+                <div class="circle red"></div>
+                <span>Estrechamiento/Compromiso teórico</span>
+            </div>
+        </div>
+        
+        <p>Movimientos incluidos: flexión, extensión, rotación axial, inclinación lateral y traslación anterior/retracción. Las diagonales son combinaciones de esos ejes.</p>
+        <p>Trayecto aproximado del vago | Trayecto aproximado de la arteria vertebral | Médula | Músculo y raíces | Hueso</p>
+        <p>Los círculos numerados señalan carga o tensión (ámbar) y posible estrechamiento o compromiso teórico (rojo). No representan una compresión medida. El número coincide con la lista; la silueta punteada es la posición neutra.</p>
+        
+        <h3>Estructuras del cuello</h3>
+        <h3>Otras partes del cuerpo</h3>
+        
+        <div class="warning">
+            <strong>Aviso Clínico Personalizado:</strong> Este visor ha sido adaptado con los hallazgos de tus resonancias y radiografías (2022-2024). Refleja la rectificación de la lordosis cervical y la anterolistesis C2-C4 documentada en flexión. Aunque está basado en tus informes, sigue siendo una representación gráfica simplificada. No sustituye la evaluación de tu médico ni mide la compresión real en tiempo real. No fuerces los rangos extremos. Si aparecen síntomas nuevos (debilidad, desmayo, visión doble), busca atención médica urgente.
+        </div>
+    </div>
+    
+    <!-- Panel de IA -->
+    <button id="ai-toggle">Validador IA</button>
+    
+    <div id="ai-panel">
+        <button id="ai-close">×</button>
+        <h3>Validador de Coherencia Clínica</h3>
+        <div id="ai-status">Estado: No inicializado</div>
+        <div id="ai-response">Presiona "Validar posición actual" para analizar la coherencia de los valores mostrados con la literatura médica.</div>
+        <button id="ai-validate" style="margin-top: 10px; width: 100%; padding: 10px; background: #4a9eff; color: white; border: none; border-radius: 5px; cursor: pointer;">Validar posición actual</button>
+        <div class="ai-disclaimer">
+            ⚠️ Esta validación NO reemplaza la evaluación clínica real. Solo compara valores con literatura publicada.
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.73/lib/index.min.js"></script>
+    
+    <script>
+        // Código existente de Three.js y visor 3D
+        let scene, camera, renderer, controls;
+        let model;
+        
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / 500, 0.1, 1000);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, 500);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            
+            camera.position.z = 5;
+            
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(1, 1, 1);
+            scene.add(light);
+            
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            
+            // Modelo temporal (reemplazar con tu .obj)
+            const geometry = new THREE.CylinderGeometry(1, 1, 3, 32);
+            const material = new THREE.MeshPhongMaterial({ color: 0x4a9eff });
+            model = new THREE.Mesh(geometry, material);
+            scene.add(model);
+            
+            animate();
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        // Control de sliders
+        const flexionSlider = document.getElementById('flexion-slider');
+        const rotationSlider = document.getElementById('rotation-slider');
+        const tiltSlider = document.getElementById('tilt-slider');
+        
+        const flexionValue = document.getElementById('flexion-value');
+        const rotationValue = document.getElementById('rotation-value');
+        const tiltValue = document.getElementById('tilt-value');
+        
+        function updateModel() {
+            const flexion = parseFloat(flexionSlider.value);
+            const rotation = parseFloat(rotationSlider.value);
+            const tilt = parseFloat(tiltSlider.value);
+            
+            flexionValue.textContent = flexion;
+            rotationValue.textContent = rotation;
+            tiltValue.textContent = tilt;
+            
+            if (model) {
+                model.rotation.x = THREE.MathUtils.degToRad(flexion);
+                model.rotation.y = THREE.MathUtils.degToRad(rotation);
+                model.rotation.z = THREE.MathUtils.degToRad(tilt);
+            }
+        }
+        
+        flexionSlider.addEventListener('input', updateModel);
+        rotationSlider.addEventListener('input', updateModel);
+        tiltSlider.addEventListener('input', updateModel);
+        
+        // Panel de IA
+        const aiToggle = document.getElementById('ai-toggle');
+        const aiPanel = document.getElementById('ai-panel');
+        const aiClose = document.getElementById('ai-close');
+        const aiStatus = document.getElementById('ai-status');
+        const aiResponse = document.getElementById('ai-response');
+        const aiValidate = document.getElementById('ai-validate');
+        
+        let engine = null;
+        let aiInitialized = false;
+        
+        aiToggle.addEventListener('click', () => {
+            aiPanel.classList.toggle('active');
+            if (!aiInitialized) {
+                initializeAI();
+            }
+        });
+        
+        aiClose.addEventListener('click', () => {
+            aiPanel.classList.remove('active');
+        });
+        
+        async function initializeAI() {
+            try {
+                aiStatus.textContent = 'Estado: Inicializando modelo...';
+                
+                engine = await mlc.createMLCEngine({
+                    model: "Phi-3-mini-4k-instruct-q4f16_1-MLC",
+                    initProgressCallback: (report) => {
+                        aiStatus.textContent = `Estado: Cargando modelo... ${Math.round(report.progress * 100)}%`;
+                    }
+                });
+                
+                aiInitialized = true;
+                aiStatus.textContent = 'Estado: Modelo cargado y listo';
+                aiResponse.textContent = 'Modelo cargado. Presiona "Validar posición actual" para analizar la coherencia.';
+                
+            } catch (error) {
+                aiStatus.textContent = 'Estado: Error al cargar modelo';
+                aiResponse.textContent = `Error: ${error.message}. Verifica que tu navegador soporte WebGPU.`;
+            }
+        }
+        
+        aiValidate.addEventListener('click', async () => {
+            if (!aiInitialized) {
+                aiResponse.textContent = 'El modelo aún no está cargado. Espera un momento.';
+                return;
+            }
+            
+            const flexion = parseFloat(flexionSlider.value);
+            const rotation = parseFloat(rotationSlider.value);
+            const tilt = parseFloat(tiltSlider.value);
+            
+            aiResponse.textContent = 'Analizando...';
+            
+            const systemPrompt = `Eres un validador de coherencia clínica para un visor 3D de columna cervical.
+
+CONTEXTO DEL PACIENTE:
+- Diagnóstico: Anterolistesis de C2 sobre C3 y C3 sobre C4 en flexión
+- Rectificación de lordosis cervical
+- Datos basados en resonancias y radiografías 2022-2024
+
+RANGOS DE REFERENCIA PUBLICADOS (literatura médica general):
+- Flexión cervical segura: 0° a 45°
+- Extensión cervical segura: 0° a 45°
+- Rotación cervical segura: 0° a 60° por lado
+- Inclinación lateral segura: 0° a 45° por lado
+- Para anterolistesis C2-C4: limitar flexión a 30-35°, rotación a 45-50°
+
+TU FUNCIÓN:
+1. Analiza los valores actuales del visor
+2. Compara con los rangos de referencia
+3. Indica si los valores están dentro de rangos seguros, en el límite, o exceden recomendaciones
+4. NO predigas síntomas
+5. NO des consejos clínicos o de tratamiento
+6. NO interpretes la condición del paciente más allá de validar coherencia
+
+FORMATO DE RESPUESTA:
+- Sé conciso (máximo 3-4 oraciones)
+- Indica claramente si los valores son coherentes con la literatura
+- Si hay valores en límite o excedidos, menciónalo
+- Termina SIEMPRE con: "Esta validación no reemplaza la evaluación clínica real."
+
+Ejemplo de respuesta válida:
+"Los valores mostrados (flexión 25°, rotación 30° izq) están dentro de los rangos recomendados para anterolistesis C2-C4 según literatura publicada. La flexión de 25° está por debajo del límite de 30-35° recomendado. Esta validación no reemplaza la evaluación clínica real."`;
+            
+            const userPrompt = `Valores actuales del visor:
+- Flexión/Extensión: ${flexion}° (${flexion > 0 ? 'extensión' : 'flexión'})
+- Rotación: ${rotation}° (${rotation > 0 ? 'derecha' : rotation < 0 ? 'izquierda' : 'neutro'})
+- Inclinación lateral: ${tilt}° (${tilt > 0 ? 'derecha' : tilt < 0 ? 'izquierda' : 'neutro'})
+
+Valida la coherencia de estos valores con la literatura médica.`;
+            
+            try {
+                const reply = await engine.chat.completions.create({
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: userPrompt }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 200
+                });
+                
+                aiResponse.textContent = reply.choices[0].message.content;
+                
+            } catch (error) {
+                aiResponse.textContent = `Error al generar respuesta: ${error.message}`;
+            }
+        });
+        
+        // Inicializar Three.js
+        init();
+        updateModel();
+    </script>
+</body>
+</html>

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mapa del movimiento cervical 3D - Configurable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+<!-- Three.js versión compatible con OBJLoader global -->
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<style>
+:root{--bg:#f5f7fa;--card:#fff;--ink:#1a2b34;--mute:#5a6b75;--line:#d1dce3;--acc:#0d7a84;--acc-light:#e8f4f5;--str:#b87400;--strbg:#fff4dc;--cmp:#c42a1f;--cmpbg:#fde8e6;--ok:#e8eef1;--vago:#7a3fb0;--art:#c2410c;--bone:#d9e2e6;--green:#2d8a4e;--green-bg:#e6f5ec;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Atkinson Hyperlegible",system-ui,sans-serif}
+main{max-width:1600px;margin:0 auto;padding:20px}
+h1{font-size:1.5rem;margin:0 0 4px}
+.sub{color:var(--mute);margin:0 0 20px;font-size:0.95rem}
+.three-col{display:grid;grid-template-columns:360px 1fr 380px;gap:20px;align-items:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h2{font-size:1.1rem;margin:0 0 12px}
+.card h3{font-size:1rem;margin:16px 0 8px;border-bottom:2px solid var(--line);padding-bottom:6px}
+.controls-col{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto}
+.checkbox-group label{display:flex;align-items:flex-start;gap:8px;font-size:0.9rem;cursor:pointer;margin-bottom:8px}
+.checkbox-group input[type="checkbox"]{width:18px;height:18px;accent-color:var(--acc);margin-top:2px}
+.btn-group{display:flex;gap:8px;margin-bottom:16px}
+.btn-group button{flex:1;background:var(--bg);border:2px solid var(--line);border-radius:8px;padding:10px;cursor:pointer;font-weight:600}
+.btn-group button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:var(--card)}
+#pad{position:relative;width:100%;aspect-ratio:1;margin:0 auto 12px;background:var(--bg);border:2px solid var(--line);border-radius:12px;touch-action:none;cursor:grab;max-width:280px}
+#dot{position:absolute;left:50%;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;background:var(--acc);border:3px solid var(--card);box-shadow:0 0 0 2px var(--acc)}
+.pl{position:absolute;font-size:0.7rem;color:var(--mute);pointer-events:none}
+.pl.u{top:6px;left:50%;transform:translateX(-50%)}.pl.d{bottom:6px;left:50%;transform:translateX(-50%)}.pl.l{left:8px;top:50%;transform:translateY(-50%)}.pl.r{right:8px;top:50%;transform:translateY(-50%)}
+.zone-info{background:var(--green-bg);border-left:3px solid var(--green);padding:8px 12px;margin:12px 0;border-radius:4px;font-size:0.85rem;color:var(--green);font-weight:600}
+.ax{margin:12px 0}
+.ax label{display:block;font-weight:700;margin:0 0 6px;font-size:0.9rem}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.ends{display:flex;justify-content:space-between;font-size:0.8rem;color:var(--mute);margin-top:4px}
+#rs{width:100%;background:var(--bg);border:2px solid var(--line);border-radius:8px;padding:10px;cursor:pointer;font-weight:600;margin-top:8px}
+.cap{font-size:0.85rem;color:var(--mute);margin:6px 0}
+.upload-section{margin:16px 0;padding:16px;background:var(--bg);border-radius:8px;border:2px dashed var(--line)}
+.upload-section h3{margin-top:0;font-size:0.95rem}
+.file-input-wrapper input[type=file]{display:none}
+.file-label{display:block;padding:12px;text-align:center;background:var(--card);border:2px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600}
+.file-label.has-files{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.uploaded-files{margin-top:12px}
+.file-item{display:flex;align-items:center;gap:8px;padding:8px;background:var(--card);border-radius:6px;margin-bottom:6px;font-size:0.85rem}
+.file-item .file-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-item .file-remove{background:none;border:none;color:var(--cmp);cursor:pointer;font-size:1.2rem}
+.extract-status{margin-top:12px;padding:10px;border-radius:6px;font-size:0.85rem;display:none}
+.extract-status.processing{display:block;background:var(--acc-light);color:var(--acc);border-left:3px solid var(--acc)}
+.extract-status.success{display:block;background:var(--green-bg);color:var(--green);border-left:3px solid var(--green)}
+.extract-status.error{display:block;background:var(--cmpbg);color:var(--cmp);border-left:3px solid var(--cmp)}
+.detected-conditions{margin-top:12px;padding:12px;background:var(--card);border-left:3px solid var(--acc);border-radius:6px}
+.detected-conditions h4{margin:0 0 8px;font-size:0.9rem;color:var(--acc)}
+.detected-conditions ul{margin:0;padding-left:20px;font-size:0.85rem}
+.viz-col{display:flex;flex-direction:column;gap:16px}
+.viz-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.fig-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.fig-container{background:var(--bg);border-radius:8px;overflow:hidden;position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;min-height:300px}
+#fig{width:100%;height:100%}
+#webgl-container{width:100%;height:100%;min-height:300px;position:relative;background:var(--bg)}
+#loading-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--mute);font-size:0.9rem;text-align:center;padding:20px}
+#loading-msg.error{color:var(--cmp);background:var(--cmpbg);border-radius:8px;border:1px solid var(--cmp)}
+.viz-caption{text-align:center;font-size:0.85rem;color:var(--mute);margin:8px 0}
+.warning-box{background:var(--cmpbg);border:2px solid var(--cmp);border-radius:8px;padding:12px;margin:16px 0;font-weight:700;color:var(--cmp);display:none}
+.warning-box.active{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0;font-size:0.85rem}
+.legend-item{display:flex;align-items:center;gap:6px}
+.legend-color{width:16px;height:16px;border-radius:4px}
+.info-col{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto}
+.struct-list{display:flex;flex-direction:column;gap:12px}
+.struct-item{background:var(--bg);border-left:4px solid var(--line);border-radius:8px;padding:12px}
+.struct-item.s1{border-left-color:var(--str)}
+.struct-item.s2{border-left-color:var(--cmp)}
+.struct-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px}
+.struct-title{font-weight:700;font-size:0.95rem;display:flex;align-items:center;gap:8px}
+.struct-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--card);font-size:0.75rem;font-weight:700}
+.tag{font-size:0.75rem;font-weight:700;padding:3px 10px;border-radius:99px}
+.tag-s0{background:var(--ok);color:var(--mute)}
+.tag-s1{background:var(--strbg);color:var(--str)}
+.tag-s2{background:var(--cmpbg);color:var(--cmp)}
+.struct-desc{font-size:0.85rem;color:var(--mute)}
+@media(max-width:1024px){.three-col{grid-template-columns:1fr}.controls-col,.info-col{position:static;max-height:none}.fig-wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>Mapa del movimiento cervical - Configurable</h1>
+<p class="sub">Sube tus certificados médicos para configurar automáticamente el visor según tus condiciones específicas.</p>
+
+<div class="three-col">
+  <div class="controls-col">
+    <div class="card">
+      <h2>Controles</h2>
+      
+      <div class="upload-section">
+        <h3>📄 Subir certificados médicos</h3>
+        <p style="font-size:0.85rem;color:var(--mute);margin-bottom:12px">Sube resonancias, radiografías o informes médicos (PDF o imágenes).</p>
+        
+        <div class="file-input-wrapper">
+          <input type="file" id="certUpload" accept=".pdf,.png,.jpg,.jpeg" multiple>
+          <label for="certUpload" class="file-label" id="fileLabel">Click para seleccionar archivos</label>
+        </div>
+        
+        <div class="uploaded-files" id="uploadedFiles"></div>
+        <div class="extract-status" id="extractStatus"></div>
+        <div class="detected-conditions" id="detectedConditions" style="display:none">
+          <h4>Condiciones detectadas:</h4>
+          <ul id="detectedList"></ul>
+        </div>
+      </div>
+
+      <h3>Configuración manual</h3>
+      
+      <div class="checkbox-group">
+        <label><input type="checkbox" id="cond_sed"> Tengo SED o hipermovilidad</label>
+        <label><input type="checkbox" id="cond_ant"> Anterolistesis o inestabilidad vertebral</label>
+        <label><input type="checkbox" id="cond_rec"> Rectificación de la lordosis cervical</label>
+      </div>
+
+      <div class="btn-group" id="pm">
+        <button data-h="rot" aria-pressed="true">Rotación</button>
+        <button data-h="tilt" aria-pressed="false">Inclinación</button>
+      </div>
+
+      <div id="pad" tabindex="0">
+        <i id="dot"></i>
+        <b class="pl u">Extensión</b>
+        <b class="pl d">Flexión</b>
+        <b class="pl l">Izq.</b>
+        <b class="pl r">Der.</b>
+      </div>
+
+      <div class="zone-info">Dentro de la zona cómoda. El objetivo es el control, no el rango.</div>
+
+      <div id="sl"></div>
+
+      <button id="rs">Volver a posición neutra</button>
+    </div>
+  </div>
+
+  <div class="viz-col">
+    <div class="viz-card">
+      <div class="fig-wrap">
+        <div class="fig-container">
+          <svg id="fig" viewBox="0 0 320 380"></svg>
+        </div>
+        <div class="fig-container">
+          <div id="webgl-container">
+            <div id="loading-msg">Cargando modelo 3D...</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="viz-caption" id="cap"></p>
+
+      <div id="clinical-warning" class="warning-box"></div>
+
+      <div id="pr" style="margin-top:12px"></div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background:var(--vago)"></div>Vago</div>
+        <div class="legend-item"><div class="legend-color" style="background:var(--art)"></div>Art. vertebral</div>
+        <div class="legend-item"><div class="legend-color" style="background:#d8b84e"></div>Médula</div>
+        <div class="legend-item"><div class="legend-color" style="background:var(--acc)"></div>Músculo</div>
+        <div class="legend-item"><div class="legend-color" style="background:var(--bone)"></div>Hueso</div>
+      </div>
+
+      <p class="cap">Los círculos señalan carga (ámbar) o compromiso teórico (rojo).</p>
+    </div>
+  </div>
+
+  <div class="info-col">
+    <div class="card">
+      <h2>Estructuras del cuello</h2>
+      <p style="font-size:0.9rem;color:var(--mute);margin-bottom:16px">Al combinar movimientos la carga puede cambiar. Cada fila muestra el nivel más alto entre los movimientos seleccionados.</p>
+      <div class="struct-list" id="out"></div>
+    </div>
+  </div>
+</div>
+</main>
+
+<script>
+window.DEFAULT_MOV = {
+    flex: { n: "Flexión", v: "side", max: 50, cap: "Vista lateral." },
+    ext: { n: "Extensión", v: "side", max: 50, cap: "Vista lateral." },
+    prot: { n: "Traslación", v: "side", max: 100, cap: "Vista lateral." },
+    rot: { n: "Rotación", v: "top", max: 80, cap: "Vista desde arriba." },
+    tilt: { n: "Inclinación lateral", v: "front", max: 40, cap: "Vista de frente." }
+};
+
+window.MOV = JSON.parse(JSON.stringify(window.DEFAULT_MOV));
+window.V0 = { fe: 0, prot: 0, rot: 0, tilt: 0 };
+
+let hk = "rot";
+let mv = "flex";
+let side = "der";
+let focus = "fe";
+let uploadedFiles = [];
+let extractedText = '';
+
+const S = [
+    ["Nervio vago", { flex: [1, "Estiramiento leve."], ext: [0, "Poco cambio."], prot: [1, "Tensión leve."], rot: [1, "Lado contrario: se estira."], tilt: [1, "Lado contrario: se estira."] }],
+    ["Arteria vertebral", { flex: [1, "Se estira un poco."], ext: [2, "Puede pinzarse entre occipucio y C1."], prot: [2, "Mismo punto de pinzamiento."], rot: [2, "Puede comprimirse a nivel C1-C2."], tilt: [1, "Lado contrario: se estira."] }],
+    ["Tronco encefálico", { flex: [2, "Riesgo de roce medular con anterolistesis."], ext: [1, "El agujero magno y C1 se acercan."], prot: [2, "Posición exigente con inestabilidad."], rot: [1, "Ligamentos alares se tensan."], tilt: [1, "Ligamentos alares trabajan de más."] }],
+    ["Médula cervical", { flex: [2, "Estrechamiento del canal con anterolistesis."], ext: [2, "Ligamento amarillo reduce el canal."], prot: [1, "Estiramiento sostenido."], rot: [1, "Canal se estrecha un poco."], tilt: [0, "Cambio pequeño."] }],
+    ["Raíces nerviosas", { flex: [1, "Se estiran al abrirse los agujeros."], ext: [2, "Agujeros se estrechan: posible pinzamiento."], prot: [1, "Tensión en raíces bajas."], rot: [1, "Lado contrario: agujero se cierra."], tilt: [2, "Lado contrario: posible pinzamiento."] }],
+    ["Ligamentos", { flex: [1, "Ligamentos posteriores tensos."], ext: [1, "Ligamentos anteriores soportan carga."], prot: [1, "Carga sostenida."], rot: [1, "Ligamentos alares al máximo."], tilt: [1, "Cápsulas del lado contrario se estiran."] }],
+    ["Músculos", { flex: [1, "Extensores frenan el peso."], ext: [1, "Suboccipitales se sobrecargan."], prot: [1, "Suboccipitales acortados."], rot: [1, "ECM se estira del lado contrario."], tilt: [1, "Lado contrario se estira."] }],
+    ["Inestabilidad vertebral", { flex: [2, "Riesgo de deslizamiento vertebral."], ext: [1, "Vértebras vuelven, ligamentos laxos."], prot: [2, "Adelantamiento agrava deslizamiento."], rot: [1, "Estrés en facetas inestables."], tilt: [1, "Descompensa la alineación."] }]
+];
+
+const TAGS = ["Poco cambio", "Estiramiento o carga", "Posible estrechamiento"];
+const SN = { der: "derecho", izq: "izquierdo" };
+const AX = { fe: { n: "Flexión / extensión", l: "Extensión", r: "Flexión" }, prot: { n: "Traslación", l: "Retracción", r: "Adelantamiento" }, rot: { n: "Rotación", l: "Izquierda", r: "Derecha" }, tilt: { n: "Inclinación", l: "Izquierda", r: "Derecha" } };
+
+function setStatus(type, message) {
+    const el = document.getElementById('extractStatus');
+    if (el) { el.className = 'extract-status ' + type; el.textContent = message; }
+}
+
+function $(id) { return document.getElementById(id); }
+
+$('certUpload').addEventListener('change', async function(e) {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    files.forEach(f => uploadedFiles.push(f));
+    updateFileList();
+    $('fileLabel').textContent = uploadedFiles.length + ' archivo(s)';
+    $('fileLabel').classList.add('has-files');
+
+    setStatus('processing', '⏳ Procesando...');
+    extractedText = '';
+
+    try {
+        for (const file of uploadedFiles) {
+            if (file.type === 'application/pdf') {
+                const text = await extractPDF(file);
+                if (text) extractedText += text + '\n';
+            } else if (file.type.startsWith('image/') && typeof Tesseract !== 'undefined') {
+                const result = await Tesseract.recognize(file, 'spa');
+                extractedText += result.data.text + '\n';
+            }
+        }
+
+        analyzeText();
+        setStatus('success', '✓ Documentos procesados.');
+    } catch (err) {
+        console.error(err);
+        setStatus('error', '❌ Error: ' + err.message);
+    }
+});
+
+async function extractPDF(file) {
+    if (typeof pdfjsLib === 'undefined') return '';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(item => item.str).join(' ') + '\n';
+    }
+    return text;
+}
+
+function analyzeText() {
+    const text = extractedText.toLowerCase();
+    const detected = [];
+
+    if (['ehlers', 'hipermovilidad', 'hiperlaxitud'].some(t => text.includes(t))) {
+        $('cond_sed').checked = true;
+        detected.push('SED o hipermovilidad');
+    }
+    if (['anterolistesis', 'inestabilidad', 'listesis'].some(t => text.includes(t))) {
+        $('cond_ant').checked = true;
+        detected.push('Anterolistesis');
+    }
+    if (['rectificación', 'rectificacion', 'pérdida de lordosis'].some(t => text.includes(t))) {
+        $('cond_rec').checked = true;
+        detected.push('Rectificación lordosis');
+    }
+
+    if (detected.length > 0) {
+        $('detectedList').innerHTML = detected.map(d => '<li>✓ ' + d + '</li>').join('');
+        $('detectedConditions').style.display = 'block';
+        handleConditionChange();
+    } else {
+        $('detectedList').innerHTML = '<li>No se detectaron condiciones. Usa configuración manual.</li>';
+        $('detectedConditions').style.display = 'block';
+    }
+}
+
+function updateFileList() {
+    $('uploadedFiles').innerHTML = uploadedFiles.map((f, i) => 
+        '<div class="file-item"><span class="file-name">' + f.name + '</span><button class="file-remove" onclick="removeFile(' + i + ')">×</button></div>'
+    ).join('');
+}
+
+window.removeFile = function(index) {
+    uploadedFiles.splice(index, 1);
+    updateFileList();
+    if (uploadedFiles.length === 0) {
+        $('fileLabel').textContent = 'Click para seleccionar archivos';
+        $('fileLabel').classList.remove('has-files');
+        $('detectedConditions').style.display = 'none';
+        $('extractStatus').style.display = 'none';
+    } else {
+        $('fileLabel').textContent = uploadedFiles.length + ' archivo(s)';
+    }
+};
+
+$('cond_sed').addEventListener('change', handleConditionChange);
+$('cond_ant').addEventListener('change', handleConditionChange);
+$('cond_rec').addEventListener('change', handleConditionChange);
+
+function handleConditionChange() {
+    if ($('cond_ant').checked) {
+        window.MOV.flex.max = 35;
+    } else {
+        window.MOV.flex.max = window.DEFAULT_MOV.flex.max;
+    }
+    updateWarning();
+    render();
+}
+
+function updateWarning() {
+    const w = $('clinical-warning');
+    if ($('cond_ant').checked) {
+        w.textContent = '⚠️ ATENCIÓN: Anterolistesis detectada. Evita forzar el mentón al pecho.';
+        if (window.V0.fe > 15 || window.V0.prot > 15) w.classList.add('active');
+        else w.classList.remove('active');
+    } else {
+        w.classList.remove('active');
+    }
+}
+
+function acts() {
+    const o = [], fe = window.V0.fe;
+    if (fe) o.push({ k: "fe", mv: fe > 0 ? "flex" : "ext", side: "der", a: Math.abs(fe) });
+    if (window.V0.prot) o.push({ k: "prot", mv: "prot", side: window.V0.prot > 0 ? "der" : "izq", a: Math.abs(window.V0.prot) });
+    if (window.V0.rot) o.push({ k: "rot", mv: "rot", side: window.V0.rot > 0 ? "der" : "izq", a: Math.abs(window.V0.rot) });
+    if (window.V0.tilt) o.push({ k: "tilt", mv: "tilt", side: window.V0.tilt > 0 ? "der" : "izq", a: Math.abs(window.V0.tilt) });
+    return o;
+}
+
+function eff(s, a) { return a < 20 ? 0 : s; }
+
+const R = Math.PI / 180, CD = "#d8b84e", GAP = [29, 28, 27, 26, 25, 20];
+const tf = (p, o) => { const c = Math.cos(o.a * R), s = Math.sin(o.a * R); return [o.x + p[0] * c - p[1] * s, o.y + p[0] * s + p[1] * c]; };
+const pl = (P, c, w, x = "") => '<polyline points="' + P.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ") + '" fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round" ' + x + '/>';
+
+function chain(ang, sk) {
+    const V = [{ x: 150, y: 335, a: ang[0] }];
+    for (let i = 0; i < 6; i++) { const o = V[i], a = (o.a + ang[i + 1]) / 2 * R; V.push({ x: o.x + Math.sin(a) * GAP[i], y: o.y - Math.cos(a) * GAP[i], a: ang[i + 1] }); }
+    return { V, S: { x: V[6].x, y: V[6].y, a: sk } };
+}
+
+const gt = o => '<g transform="translate(' + o.x.toFixed(1) + ',' + o.y.toFixed(1) + ') rotate(' + o.a.toFixed(1) + ')" fill="var(--bone)" stroke="var(--mute)" stroke-width="1.5">';
+
+function vert(i, o) {
+    let g = gt(o);
+    if (i < 6) g += '<rect x="-4" y="' + (-GAP[i] + 10) + '" width="22" height="' + (GAP[i] - 20) + '" rx="3" fill="var(--line)" stroke="none"/>';
+    if (i < 6) g += '<rect x="-4" y="-10" width="22" height="20" rx="5"/><rect x="-22" y="-9" width="19" height="4" rx="2"/><rect x="-27" y="-7" width="6" height="17" rx="3"/><path d="M-24 -3 L-48 8 L-24 9Z"/>' + (i > 0 ? '<circle cx="7" cy="0" r="4" fill="var(--card)"/>' : "");
+    if (i === 5) g += '<path d="M0 -10 L4 -31 L11 -31 L14 -10Z"/>';
+    if (i === 6) g += '<ellipse cx="11" cy="-2" rx="4" ry="8"/><ellipse cx="-18" cy="-2" rx="5" ry="9"/><rect x="-6" y="-9" width="14" height="14" rx="4"/>';
+    return g + '</g>';
+}
+
+const SK = "M-40 -8 C-78 -30 -76 -110 -20 -130 C30 -144 80 -120 84 -82 L88 -70 L102 -52 L92 -48 L94 -40 L89 -32 L92 -22 L84 -6 L40 -2 L24 -12 L6 -14Z", BR = '<ellipse cx="14" cy="-84" rx="52" ry="38" fill="#e7a9b8" fill-opacity=".35"/><ellipse cx="-30" cy="-44" rx="26" ry="17" fill="#b08fd0" fill-opacity=".45"/>';
+
+function skull(K, fr, gh) {
+    const f = gh ? 'fill="none"' : 'fill="var(--bone)" stroke="var(--mute)" stroke-width="2"';
+    return '<g transform="translate(' + K.x.toFixed(1) + ',' + K.y.toFixed(1) + ') rotate(' + K.a.toFixed(1) + ')" ' + f + '>' + (fr ? '<ellipse cx="0" cy="-42" rx="40" ry="44"/><path d="M-22 -4 Q0 12 22 -4"/>' : '<path d="' + SK + '"/>' + (gh ? "" : BR) + '<ellipse cx="6" cy="-46" rx="6" ry="10"/><circle cx="64" cy="-72" r="2.5" fill="var(--mute)"/>') + '</g>';
+}
+
+const ghost = (G, f) => '<g opacity=".5" stroke="var(--mute)" stroke-width="1.5" fill="none">' + pl(G.V.map(o => [o.x, o.y]).concat([[G.S.x, G.S.y]]), "var(--mute)", 1.5, 'stroke-dasharray="4 4"') + skull(G.S, f, 1) + '</g>';
+
+const PA = { 0: { rot: "C1", tilt: "músculos" }, 1: { flex: "arco C1", ext: "arco C1", rot: "C1 sobre C2" }, 2: { flex: "odontoides C2", ext: "agujero magno", rot: "odontoides" }, 3: { flex: "vértebras", ext: "ligamento amarillo", rot: "ligamento transverso" }, 4: { ext: "facetarias", tilt: "facetarias", def: "agujero" } };
+const NS = ["Nervio vago", "Arteria vertebral", "Tronco encefálico", "Médula", "Raíces nerviosas", "Ligamentos", "Músculos", "Inestabilidad"];
+
+const mark = (i, p, v, an, l) => {
+    const c = v > 1 ? "var(--cmp)" : "var(--str)", x = p[0].toFixed(1), y = p[1].toFixed(1);
+    const ar = v > 1 ? [0, 180].map(d => { const q = (an + d) * R, f = (r) => [(p[0] + Math.cos(q) * r).toFixed(1), (p[1] + Math.sin(q) * r).toFixed(1)], a = f(24), b = f(13); return '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="' + c + '" stroke-width="3"/>'; }).join("") : "";
+    const ag = v > 1 && PA[i] ? (PA[i][mv] || PA[i].def || "") : "";
+    const tl = l ? '<text x="' + (l === "l" ? p[0] - 15 : p[0] + 15) + '" y="' + (p[1] + 4).toFixed(1) + '" text-anchor="' + (l === "l" ? "end" : "start") + '" font-size="10" font-weight="700" fill="var(--ink)" stroke="var(--card)" stroke-width="3">' + NS[i] + '</text>' + (ag ? '<text x="' + (l === "l" ? p[0] - 15 : p[0] + 15) + '" y="' + (p[1] + 15).toFixed(1) + '" text-anchor="' + (l === "l" ? "end" : "start") + '" font-size="9" fill="var(--cmp)">contra ' + ag + '</text>' : "") : "";
+    return '<g><circle cx="' + x + '" cy="' + y + '" r="10" fill="' + c + '" fill-opacity=".3" stroke="' + c + '" stroke-width="2"/><text x="' + x + '" y="' + (p[1] + 4).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink)">' + (i + 1) + '</text>' + tl + '</g>';
+};
+
+function draw(a) {
+    const m = window.MOV[mv], deg = m.max * a / 100;
+    const st = S.map(([n, d]) => eff(d[mv][0], a));
+    const cv = st[0] > 1 ? "var(--cmp)" : "var(--vago)", ca = st[1] > 1 ? "var(--cmp)" : "var(--art)";
+    let s = '<defs><marker id="ar" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6z" fill="var(--cmp)"/></marker></defs>', H = [];
+    const G = chain([0, 0, 0, 0, 0, 0, 0], 0);
+    
+    if (m.v === "side") {
+        const t = mv === "flex" ? deg : mv === "ext" ? -deg : 0, p = mv === "prot" ? (side === "der" ? a : -a) / 100 : 0;
+        const PR = [0, 8, 16, 18, 10, -8, -20], ang = PR.map((v, i) => p * v + t * i / 7);
+        const { V, S: K } = chain(ang, t - 26 * p), spin = o => tf([-45, 6], o);
+        const skin = [...V].reverse().map(o => tf([-66, 0], o)).concat([[70, 362], [60, 380], [250, 380], [238, 358]], V.slice(0, 6).map(o => tf([74, 0], o)), [tf([56, 2], K)]);
+        s += '<polygon points="' + skin.map(q => q[0].toFixed(1) + "," + q[1].toFixed(1)).join(" ") + '" fill="var(--ok)" fill-opacity=".6" stroke="var(--line)"/>';
+        s += pl(V.slice(0, 6).map(o => tf([46, 0], o)), "#d98a8a", 8, 'opacity=".55"');
+        s += pl(V.map(o => tf([-58, 0], o)).concat([tf([-50, -30], K)]), "var(--acc)", 12, 'opacity=".18"');
+        s += ghost(G, 0) + skull(K) + V.map((o, i) => vert(i, o)).join("");
+        s += pl(V.slice(0, 6).map(spin).concat([tf([-36, -14], K)]), "var(--mute)", 1.5, 'stroke-dasharray="3 3"');
+        const m1 = spin(V[5]), m2 = tf([-40, -16], K);
+        s += pl([m1, m2], "var(--acc)", 6, 'opacity=".7"');
+        s += pl(V.map(o => tf([-12, 0], o)).concat([tf([-8, -30], K), tf([-4, -58], K)]), CD, 7);
+        s += pl(V.slice(1, 6).map(o => tf([7, 0], o)).concat([tf([7, -8], V[6]), tf([-18, -16], V[6]), tf([-16, -30], K), tf([-6, -44], K)]), ca, 3);
+        const vg = V.map(o => tf([32, 0], o)).concat([tf([32, -10], V[6]), tf([26, -22], K)]);
+        s += pl(vg, "var(--vago)", 12, 'opacity=".18"') + pl(vg, cv, 3.5);
+        const tx = (q, x, fs) => '<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" font-size="' + fs + '" fill="var(--mute)">' + x + '</text>';
+        s += V.map((o, i) => tx(tf([-62, 4], o), "C" + (7 - i), 10)).join("") + tx(tf([88, 6], V[1]), "Tráquea", 9) + tx(tf([-40, -38], K), "Cerebelo", 9);
+        H = [[0, tf([32, -8], V[6]), 0, "r"], [1, tf([-14, -14], V[6]), 90, "l"], [2, tf([8, -34], V[5]), 0, "r"], [3, tf([-12, 0], V[3]), 0, "l"], [4, tf([4, -20], V[3]), 0, "r"], [5, spin(V[1]), 0, "l"], [6, [(m1[0] + m2[0]) / 2, (m1[1] + m2[1]) / 2], 90, "l"]];
+    } else if (m.v === "top") {
+        const r = (side === "der" ? 1 : -1) * deg, cx = 160, cy = 172;
+        s += '<ellipse cx="160" cy="192" rx="58" ry="70" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="4 4" opacity=".5"/>';
+        s += '<ellipse cx="160" cy="205" rx="78" ry="52" fill="var(--line)" opacity=".6"/><ellipse cx="160" cy="168" rx="11" ry="17" fill="var(--bone)" stroke="var(--mute)" stroke-width="1.5"/>';
+        s += '<circle cx="160" cy="224" r="14" fill="' + CD + '"/>';
+        s += '<g transform="rotate(' + r + ' 160 172)"><ellipse cx="160" cy="192" rx="58" ry="70" fill="none" stroke="var(--bone)" stroke-width="16"/><line x1="112" y1="190" x2="208" y2="190" stroke="var(--str)" stroke-width="4"/><circle cx="102" cy="196" r="6" fill="' + ca + '"/><circle cx="218" cy="196" r="6" fill="' + ca + '"/></g>';
+        s += '<text x="160" y="40" text-anchor="middle" font-size="11" fill="var(--mute)">Frente</text><text x="160" y="318" text-anchor="middle" font-size="11" fill="var(--mute)">Espalda</text>';
+        H = [[0, [side === "der" ? 88 : 232, 140]], [1, [side === "der" ? 102 : 218, 196]], [2, [160, 168]], [3, [160, 224]]];
+    } else {
+        const sg = side === "der" ? -1 : 1, t = sg * deg;
+        const { V, S: K } = chain([0, 1, 2, 3, 4, 5, 6].map(i => t * i / 7), t);
+        s += ghost(G, 1) + skull(K, 1);
+        s += pl(V.map(o => tf([0, 0], o)).concat([tf([0, -40], K)]), CD, 7);
+        for (const e of [-1, 1]) {
+            for (let i = 0; i < 4; i++) s += pl([tf([e * 16, -GAP[i] / 2], V[i]), tf([e * 52, -GAP[i] / 2 + 8], V[i])], "var(--acc)", 2.5);
+            const vg = V.map(o => tf([e * 44, 0], o)).concat([tf([e * 36, -24], K)]);
+            s += pl(vg, "var(--vago)", 10, 'opacity=".18"') + pl(vg, cv, 3);
+        }
+        H = [[0, tf([-sg * 44, 0], V[4])], [1, tf([sg * 22, 0], V[5])], [2, tf([0, -14], V[6])], [3, tf([0, 0], V[3])]];
+    }
+    
+    s += H.map(([i, p, an, l]) => st[i] ? mark(i, p, st[i], an || 0, l) : "").join("");
+    $('fig').innerHTML = s;
+}
+
+window.render = function() {
+    try {
+        const A = acts();
+        syncPad();
+        
+        for (const k in AX) {
+            const v = window.V0[k], o = document.getElementById("o_" + k);
+            if (!o) continue;
+            if (!v) o.textContent = "neutra";
+            else if (k === "prot") o.textContent = Math.abs(v) + '% ' + (v > 0 ? "adelantamiento" : "retracción");
+            else {
+                const q = k === "fe" ? (v > 0 ? "flex" : "ext") : k;
+                o.textContent = (window.MOV[q].max * Math.abs(v) / 100).toFixed(0) + '° ' + (k === "fe" ? (v > 0 ? "flexión" : "extensión") : v > 0 ? "derecha" : "izquierda");
+            }
+        }
+
+        updateWarning();
+
+        const f = A.find(x => x.k === focus) || A[0] || { mv: "flex", side: "der", a: 0 };
+        mv = f.mv; side = f.side;
+        $('cap').textContent = window.MOV[mv].cap;
+        draw(f.a);
+        
+        const pr = S.map(([n, d], i) => ({ n, i, s: eff(d[mv][0], f.a) })).filter(x => x.s > 1);
+        $('pr').innerHTML = f.a < 20 ? "<p style='color:var(--mute);font-size:0.9rem'>No se identifica compresión.</p>" : pr.length ? "<b style='font-size:0.9rem'>Estructuras afectadas:</b>" + pr.map(x => '<div style="padding-left:10px;border-left:3px solid var(--cmp);margin-top:4px;font-size:0.9rem">' + x.n + '</div>').join("") : "";
+
+        const rows = S.map(([n, d], i) => {
+            let b = { s: 0, a: 0, t: "", m: "" }; let first = true;
+            for (const x of A) {
+                const [s0, t] = d[x.mv], s = eff(s0, x.a);
+                if (first || s > b.s) {
+                    first = false; const I = SN[x.side], C = SN[x.side === "der" ? "izq" : "der"];
+                    b = { s, a: x.a, t: t.replaceAll("{I}", I).replaceAll("{C}", C), m: window.MOV[x.mv].n };
+                }
+            }
+            return { i, n, ...b };
+        }).sort((x, y) => y.s - x.s);
+
+        $('out').innerHTML = rows.map(r => '<div class="struct-item s' + r.s + '"><div class="struct-header"><div class="struct-title"><span class="struct-num">' + (r.i + 1) + '</span>' + r.n + '</div><span class="tag tag-s' + r.s + '">' + TAGS[r.s] + '</span></div><div class="struct-desc">' + (r.s === 0 ? "Poca carga." : r.t) + '</div></div>').join("");
+    } catch (err) {
+        console.error('Error en render:', err);
+    }
+};
+
+function sliders() {
+    $('sl').innerHTML = Object.entries(AX).map(([k, x]) => '<div class="ax"><label for="r_' + k + '">' + x.n + ': <b id="o_' + k + '">neutra</b></label><input type="range" id="r_' + k + '" data-k="' + k + '" min="-100" max="100" value="0"><div class="ends"><span>' + x.l + '</span><span>' + x.r + '</span></div></div>').join("") + '<button id="rs">Volver a posición neutra</button>';
+}
+
+function syncPad() { 
+    $('dot').style.left = (50 + window.V0[hk] / 2) + "%"; 
+    $('dot').style.top = (50 + window.V0.fe / 2) + "%"; 
+    for (const k in window.V0) { 
+        const e = document.getElementById("r_" + k); 
+        if (e) e.value = window.V0[k]; 
+    } 
+}
+
+$('sl').addEventListener('input', function(e) { 
+    const k = e.target.dataset.k; 
+    if (k) { 
+        window.V0[k] = +e.target.value; 
+        focus = k; 
+        window.render(); 
+    } 
+});
+
+$('sl').addEventListener('click', function(e) { 
+    if (e.target.id === 'rs') { 
+        for (const k in window.V0) { 
+            window.V0[k] = 0; 
+            const el = document.getElementById('r_' + k);
+            if (el) el.value = 0;
+        } 
+        focus = 'fe'; 
+        window.render(); 
+    } 
+});
+
+let drag = false;
+$('pad').addEventListener('pointerdown', function(e) { drag = true; padSet(e); });
+$('pad').addEventListener('pointermove', function(e) { if (drag) padSet(e); });
+$('pad').addEventListener('pointerup', function() { drag = false; });
+
+function padSet(e) { 
+    const r = $('pad').getBoundingClientRect();
+    const cl = v => Math.max(-100, Math.min(100, Math.round(v))); 
+    const x = cl(((e.clientX - r.left) / r.width - .5) * 200);
+    const y = cl(((e.clientY - r.top) / r.height - .5) * 200); 
+    window.V0[hk] = x; 
+    window.V0.fe = y; 
+    focus = Math.abs(x) > Math.abs(y) ? hk : 'fe'; 
+    window.render(); 
+}
+
+$('pm').addEventListener('click', function(e) { 
+    const h = e.target.dataset.h; 
+    if (h) { 
+        hk = h; 
+        for (const b of $('pm').children) b.setAttribute('aria-pressed', b.dataset.h === h);
+        focus = h; 
+        window.render(); 
+    } 
+});
+
+sliders();
+window.render();
+
+// ============ THREE.JS CON VERSIÓN COMPATIBLE ============
+console.log('=== INICIANDO THREE.JS ===');
+console.log('THREE disponible:', typeof THREE !== 'undefined');
+console.log('THREE.OBJLoader disponible:', typeof THREE.OBJLoader !== 'undefined');
+
+const container = $('webgl-container');
+const loadingMsg = $('loading-msg');
+
+let scene, camera, renderer, headPivot, modelLoaded = false;
+
+try {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf5f7fa);
+
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 0, 5.0);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);  // Reducido de 1.2 a 0.6
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 0.8);  // Reducido de 2.5 a 1.5
+    keyLight.position.set(5, 5, 5);
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xb0c4de, 0.4);  // Luz de relleno azulada
+    fillLight.position.set(-5, 0, 5);
+    scene.add(fillLight);
+
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);  // Luz trasera
+    backLight.position.set(0, -5, -5);
+    scene.add(backLight);
+
+    headPivot = new THREE.Group();
+    scene.add(headPivot);
+
+    // Verificar que OBJLoader está disponible
+    if (typeof THREE.OBJLoader === 'undefined') {
+        throw new Error('OBJLoader no está disponible. Verifica que el script de OBJLoader se cargó correctamente.');
+    }
+
+    const loader = new THREE.OBJLoader();
+    const modelUrl = './Person002_wrap.obj';
+    
+    console.log('Cargando modelo desde:', modelUrl);
+
+    loader.load(
+        modelUrl,
+        function(object) {
+            console.log('✓ Modelo cargado exitosamente');
+            loadingMsg.style.display = 'none';
+
+            const box = new THREE.Box3().setFromObject(object);
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            object.scale.setScalar(2.5 / maxDim);
+
+            const box2 = new THREE.Box3().setFromObject(object);
+            const center = box2.getCenter(new THREE.Vector3());
+            object.position.sub(center);
+
+            object.traverse(function(child) {
+                if (child.isMesh) {
+                    child.geometry.computeVertexNormals();
+                    child.material = new THREE.MeshStandardMaterial({
+                    color: 0x8e7b6a,  // Color piel más oscuro y definido
+                    roughness: 0.7,   // Más rugosidad para mejor definición
+                    metalness: 0.0,   // Sin metalicidad
+                    side: THREE.DoubleSide
+                });
+                }
+            });
+
+            headPivot.add(object);
+            modelLoaded = true;
+        },
+        function(xhr) {
+            if (xhr.total !== 0) {
+                const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
+                loadingMsg.textContent = 'Cargando... ' + percent + '%';
+            }
+        },
+        function(err) {
+            console.error('✗ Error cargando modelo:', err);
+            loadingMsg.className = 'error';
+            loadingMsg.innerHTML = '<b>Error al cargar modelo 3D</b><br><small>Verifica que Person002_wrap.obj está en la raíz del repositorio.</small>';
+        }
+    );
+
+} catch (err) {
+    console.error('Error inicializando Three.js:', err);
+    loadingMsg.className = 'error';
+    loadingMsg.innerHTML = '<b>Error Three.js</b><br><small>' + err.message + '</small>';
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (modelLoaded && headPivot) {
+        headPivot.rotation.y += ((window.V0.rot / 100) * (Math.PI / 3) - headPivot.rotation.y) * 0.1;
+        headPivot.rotation.z += ((window.V0.tilt / 100) * -(Math.PI / 5) - headPivot.rotation.z) * 0.1;
+        headPivot.rotation.x += ((window.V0.fe / 100) * (Math.PI / 5) - headPivot.rotation.x) * 0.1;
+        headPivot.position.z += ((window.V0.prot / 100) * 0.2 - headPivot.position.z) * 0.1;
+    }
+
+    renderer.render(scene, camera);
+}
+
+animate();
+
+window.addEventListener('resize', function() {
+    if (!container.clientWidth) return;
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+});
+
+console.log('=== INICIALIZACIÓN COMPLETA ===');
+</script>
+</body>
+</html>
