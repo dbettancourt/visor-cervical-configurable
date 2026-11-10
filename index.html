@@ -722,7 +722,8 @@ async function initializeAI() {
     try {
         $('ai-status').textContent = 'Estado: Inicializando modelo (esto puede tardar la primera vez)...';
         
-        aiEngine = await webllm.CreateMLCEngine(
+        // Nota: usamos window.webllm para asegurar que lo encuentre
+        const engine = await window.webllm.CreateMLCEngine(
             "Phi-3-mini-4k-instruct-q4f16_1-MLC",
             {
                 initProgressCallback: (report) => {
@@ -731,13 +732,15 @@ async function initializeAI() {
             }
         );
         
-        aiInitialized = true;
+        window.aiEngine = engine; // Guardamos la instancia globalmente
+        window.aiInitialized = true;
         $('ai-status').textContent = 'Estado: Modelo cargado y listo';
         $('ai-response').textContent = 'Modelo cargado. Presiona "Validar posición actual" para analizar la coherencia.';
         
     } catch (error) {
         $('ai-status').textContent = 'Estado: Error al cargar modelo';
-        $('ai-response').textContent = `Error: ${error.message}. Verifica que tu navegador soporte WebGPU (Chrome/Edge actualizados).`;
+        $('ai-response').textContent = `Error: ${error.message}. Verifica que tu navegador soporte WebGPU (Chrome/Edge actualizados) y que no tengas un bloqueador de anuncios activo.`;
+        console.error("Error detallado de WebLLM:", error);
     }
 }
 
