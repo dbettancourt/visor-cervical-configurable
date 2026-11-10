@@ -191,6 +191,19 @@ input[type=range]{width:100%;accent-color:var(--acc)}
     </div>
   </div>
 </div>
+    <!-- Panel de IA -->
+  <button id="ai-toggle">Validador IA</button>
+  
+  <div id="ai-panel">
+    <button id="ai-close">×</button>
+    <h3 style="margin-top:0; font-size:1.1rem;">Validador de Coherencia Clínica</h3>
+    <div id="ai-status" style="font-size:0.85rem; color:var(--mute); margin-bottom:8px;">Estado: No inicializado</div>
+    <div id="ai-response">Presiona "Validar posición actual" para analizar la coherencia de los valores mostrados con la literatura médica.</div>
+    <button id="ai-validate">Validar posición actual</button>
+    <div class="ai-disclaimer">
+      ⚠️ Esta validación NO reemplaza la evaluación clínica real. Solo compara valores con literatura publicada.
+    </div>
+  </div>
 </main>
 
 <script>
