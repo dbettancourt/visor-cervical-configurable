@@ -11,8 +11,12 @@
 <!-- Three.js versión compatible con OBJLoader global -->
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-<!-- WebLLM para IA local en el navegador -->
-<script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.73/lib/index.min.js"></script>
+<!-- WebLLM para IA local en el navegador (Versión Módulo ES robusta) -->
+<script type="module">
+  import * as webllm from "https://esm.sh/@mlc-ai/web-llm@0.2.73";
+  window.webllm = webllm; // Lo hacemos disponible globalmente para tu código
+  console.log("✅ WebLLM cargado correctamente en window.webllm");
+</script>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--ink:#1a2b34;--mute:#5a6b75;--line:#d1dce3;--acc:#0d7a84;--acc-light:#e8f4f5;--str:#b87400;--strbg:#fff4dc;--cmp:#c42a1f;--cmpbg:#fde8e6;--ok:#e8eef1;--vago:#7a3fb0;--art:#c2410c;--bone:#d9e2e6;--green:#2d8a4e;--green-bg:#e6f5ec;}
 *{box-sizing:border-box}
