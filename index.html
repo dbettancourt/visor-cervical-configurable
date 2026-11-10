@@ -11,12 +11,23 @@
 <!-- Three.js versión compatible con OBJLoader global -->
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-<!-- WebLLM para IA local en el navegador (Versión Módulo ES robusta) -->
+
+<!-- Import Map para WebLLM (forma moderna y robusta) -->
+<script type="importmap">
+{
+  "imports": {
+    "@mlc-ai/web-llm": "https://esm.sh/@mlc-ai/web-llm@0.2.73"
+  }
+}
+</script>
+
+<!-- Cargar WebLLM y exponerlo globalmente -->
 <script type="module">
-  import * as webllm from "https://esm.sh/@mlc-ai/web-llm@0.2.73";
-  window.webllm = webllm; // Lo hacemos disponible globalmente para tu código
+  import * as webllm from "@mlc-ai/web-llm";
+  window.webllm = webllm;
   console.log("✅ WebLLM cargado correctamente en window.webllm");
 </script>
+
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--ink:#1a2b34;--mute:#5a6b75;--line:#d1dce3;--acc:#0d7a84;--acc-light:#e8f4f5;--str:#b87400;--strbg:#fff4dc;--cmp:#c42a1f;--cmpbg:#fde8e6;--ok:#e8eef1;--vago:#7a3fb0;--art:#c2410c;--bone:#d9e2e6;--green:#2d8a4e;--green-bg:#e6f5ec;}
 *{box-sizing:border-box}
@@ -228,6 +239,8 @@ let side = "der";
 let focus = "fe";
 let uploadedFiles = [];
 let extractedText = '';
+let aiEngine = null;
+let aiInitialized = false;
 
 const S = [
     ["Nervio vago", { flex: [1, "Estiramiento leve."], ext: [0, "Poco cambio."], prot: [1, "Tensión leve."], rot: [1, "Lado contrario: se estira."], tilt: [1, "Lado contrario: se estira."] }],
@@ -702,8 +715,6 @@ console.log('=== INICIALIZACIÓN COMPLETA ===');
 // =====================================================================
 // MÓDULO DE VALIDACIÓN CON IA LOCAL (WebLLM)
 // =====================================================================
-let aiEngine = null;
-let aiInitialized = false;
 
 function getDegAndDesc(k, v) {
     if (v === 0) return { deg: 0, desc: "neutra" };
@@ -720,27 +731,35 @@ function getDegAndDesc(k, v) {
 
 async function initializeAI() {
     try {
-        $('ai-status').textContent = 'Estado: Inicializando modelo (esto puede tardar la primera vez)...';
+        $('ai-status').textContent = 'Estado: Verificando WebLLM...';
         
-        // Nota: usamos window.webllm para asegurar que lo encuentre
+        // Verificar que WebLLM esté cargado
+        if (typeof window.webllm === 'undefined') {
+            throw new Error('WebLLM no está cargado. Verifica tu conexión a internet y recarga la página.');
+        }
+        
+        $('ai-status').textContent = 'Estado: Inicializando modelo (esto puede tardar 2-5 minutos la primera vez)...';
+        
         const engine = await window.webllm.CreateMLCEngine(
             "Phi-3-mini-4k-instruct-q4f16_1-MLC",
             {
                 initProgressCallback: (report) => {
                     $('ai-status').textContent = `Estado: ${report.text}`;
+                    console.log('Progreso WebLLM:', report);
                 }
             }
         );
         
-        window.aiEngine = engine; // Guardamos la instancia globalmente
-        window.aiInitialized = true;
-        $('ai-status').textContent = 'Estado: Modelo cargado y listo';
-        $('ai-response').textContent = 'Modelo cargado. Presiona "Validar posición actual" para analizar la coherencia.';
+        aiEngine = engine;
+        aiInitialized = true;
+        $('ai-status').textContent = 'Estado: ✅ Modelo cargado y listo';
+        $('ai-response').textContent = 'Modelo cargado correctamente. Presiona "Validar posición actual" para analizar la coherencia de los valores mostrados.';
+        console.log('✅ IA inicializada correctamente');
         
     } catch (error) {
-        $('ai-status').textContent = 'Estado: Error al cargar modelo';
-        $('ai-response').textContent = `Error: ${error.message}. Verifica que tu navegador soporte WebGPU (Chrome/Edge actualizados) y que no tengas un bloqueador de anuncios activo.`;
-        console.error("Error detallado de WebLLM:", error);
+        $('ai-status').textContent = 'Estado: ❌ Error al cargar modelo';
+        $('ai-response').textContent = `Error: ${error.message}\n\nSoluciones:\n1. Verifica que uses Chrome o Edge actualizado\n2. Desactiva bloqueadores de anuncios\n3. Verifica tu conexión a internet\n4. Revisa la consola (F12) para más detalles`;
+        console.error("❌ Error detallado de WebLLM:", error);
     }
 }
 
@@ -748,6 +767,7 @@ $('ai-toggle').addEventListener('click', () => {
     const panel = $('ai-panel');
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     if (!aiInitialized && panel.style.display === 'block') {
+        console.log('Iniciando IA por primera vez...');
         initializeAI();
     }
 });
@@ -758,11 +778,11 @@ $('ai-close').addEventListener('click', () => {
 
 $('ai-validate').addEventListener('click', async () => {
     if (!aiInitialized) {
-        $('ai-response').textContent = 'El modelo aún no está cargado. Espera un momento.';
+        $('ai-response').textContent = 'El modelo aún no está cargado. Espera a que termine la inicialización o recarga la página.';
         return;
     }
     
-    $('ai-response').textContent = 'Analizando coherencia clínica...';
+    $('ai-response').textContent = ' Analizando coherencia clínica...';
     
     const condAnt = $('cond_ant').checked ? "- Anterolistesis o inestabilidad vertebral detectada." : "";
     const condSed = $('cond_sed').checked ? "- SED o hipermovilidad detectada." : "";
@@ -820,11 +840,28 @@ Valida la coherencia de estos valores con la literatura médica.`;
         });
         
         $('ai-response').textContent = reply.choices[0].message.content;
+        console.log('✅ Respuesta de IA generada correctamente');
         
     } catch (error) {
-        $('ai-response').textContent = `Error al generar respuesta: ${error.message}`;
+        $('ai-response').textContent = `❌ Error al generar respuesta: ${error.message}`;
+        console.error('Error generando respuesta:', error);
     }
 });
+
+// Verificar WebGPU al cargar
+if (navigator.gpu) {
+    navigator.gpu.requestAdapter().then(adapter => {
+        if (adapter) {
+            console.log('✅ WebGPU disponible');
+        } else {
+            console.warn('⚠️ WebGPU no disponible en este dispositivo');
+        }
+    }).catch(err => {
+        console.error('❌ Error verificando WebGPU:', err);
+    });
+} else {
+    console.warn('⚠️ WebGPU no soportado en este navegador');
+}
 </script>
 </body>
 </html>
