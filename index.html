@@ -11,23 +11,6 @@
 <!-- Three.js versión compatible con OBJLoader global -->
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-
-<!-- Import Map para WebLLM (forma moderna y robusta) -->
-<script type="importmap">
-{
-  "imports": {
-    "@mlc-ai/web-llm": "https://esm.sh/@mlc-ai/web-llm@0.2.73"
-  }
-}
-</script>
-
-<!-- Cargar WebLLM y exponerlo globalmente -->
-<script type="module">
-  import * as webllm from "@mlc-ai/web-llm";
-  window.webllm = webllm;
-  console.log("✅ WebLLM cargado correctamente en window.webllm");
-</script>
-
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--ink:#1a2b34;--mute:#5a6b75;--line:#d1dce3;--acc:#0d7a84;--acc-light:#e8f4f5;--str:#b87400;--strbg:#fff4dc;--cmp:#c42a1f;--cmpbg:#fde8e6;--ok:#e8eef1;--vago:#7a3fb0;--art:#c2410c;--bone:#d9e2e6;--green:#2d8a4e;--green-bg:#e6f5ec;}
 *{box-sizing:border-box}
@@ -99,16 +82,22 @@ input[type=range]{width:100%;accent-color:var(--acc)}
 .tag-s1{background:var(--strbg);color:var(--str)}
 .tag-s2{background:var(--cmpbg);color:var(--cmp)}
 .struct-desc{font-size:0.85rem;color:var(--mute)}
-
-/* Estilos del Panel de IA */
-#ai-toggle{position:fixed;bottom:20px;right:20px;background:var(--acc);color:white;border:none;padding:12px 20px;border-radius:25px;cursor:pointer;z-index:999;font-weight:bold;box-shadow:0 4px 12px rgba(0,0,0,0.2);font-family:inherit}
-#ai-panel{position:fixed;bottom:80px;right:20px;width:350px;background:var(--card);border:2px solid var(--acc);border-radius:12px;padding:16px;display:none;z-index:1000;box-shadow:0 8px 24px rgba(0,0,0,0.15);max-height:80vh;overflow-y:auto;font-family:inherit}
-#ai-close{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--mute);font-size:24px;cursor:pointer;line-height:1}
-#ai-response{background:var(--bg);padding:12px;border-radius:8px;font-size:0.9rem;line-height:1.5;color:var(--ink);min-height:100px;white-space:pre-wrap}
-#ai-validate{margin-top:12px;width:100%;padding:10px;background:var(--acc);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit}
-.ai-disclaimer{background:var(--cmpbg);color:var(--cmp);padding:10px;border-radius:8px;margin-top:12px;font-size:0.8rem;border-left:3px solid var(--cmp)}
-
 @media(max-width:1024px){.three-col{grid-template-columns:1fr}.controls-col,.info-col{position:static;max-height:none}.fig-wrap{grid-template-columns:1fr}}
+/* --- Capa de validacion con IA: cerrada por defecto, no altera el layout --- */
+.ai-box{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.ai-box summary{cursor:pointer;font-size:0.9rem;color:var(--mute);font-weight:700;list-style:none;display:flex;align-items:center;gap:8px}
+.ai-box summary::-webkit-details-marker{display:none}
+.ai-box summary::before{content:"\25B8";color:var(--acc);font-size:0.8rem;transition:transform .15s}
+.ai-box[open] summary::before{transform:rotate(90deg)}
+.ai-box p{font-size:0.85rem;color:var(--mute);margin:10px 0}
+.ai-btn{width:100%;background:var(--acc);color:var(--card);border:2px solid var(--acc);border-radius:8px;padding:10px;cursor:pointer;font-weight:600;font-size:0.9rem}
+.ai-btn:disabled{background:var(--bg);color:var(--mute);border-color:var(--line);cursor:not-allowed}
+.ai-status{font-size:0.8rem;color:var(--mute);margin-top:8px;min-height:1em}
+.ai-status.error{color:var(--cmp)}
+.ai-out{font-size:0.88rem;line-height:1.55;margin-top:10px;padding:10px 12px;background:var(--acc-light);border-left:3px solid var(--acc);border-radius:6px;white-space:pre-wrap;display:none}
+.ai-out.visible{display:block}
+.ai-disclaimer{font-size:0.75rem;color:var(--mute);margin-top:6px;font-style:italic;display:none}
+.ai-disclaimer.visible{display:block}
 </style>
 </head>
 <body>
@@ -203,22 +192,18 @@ input[type=range]{width:100%;accent-color:var(--acc)}
       <h2>Estructuras del cuello</h2>
       <p style="font-size:0.9rem;color:var(--mute);margin-bottom:16px">Al combinar movimientos la carga puede cambiar. Cada fila muestra el nivel más alto entre los movimientos seleccionados.</p>
       <div class="struct-list" id="out"></div>
+
+      <details class="ai-box" id="ai-box">
+        <summary>Validar estas estructuras con IA</summary>
+        <p>Compara el resultado de arriba con la literatura. No modifica los niveles calculados: solo agrega una observación.</p>
+        <button class="ai-btn" id="ai-run" type="button">Analizar coherencia</button>
+        <div class="ai-status" id="ai-status"></div>
+        <div class="ai-out" id="ai-out"></div>
+        <div class="ai-disclaimer" id="ai-disclaimer">Esta validación no reemplaza la evaluación clínica real.</div>
+      </details>
     </div>
   </div>
 </div>
-    <!-- Panel de IA -->
-  <button id="ai-toggle">Validador IA</button>
-  
-  <div id="ai-panel">
-    <button id="ai-close">×</button>
-    <h3 style="margin-top:0; font-size:1.1rem;">Validador de Coherencia Clínica</h3>
-    <div id="ai-status" style="font-size:0.85rem; color:var(--mute); margin-bottom:8px;">Estado: No inicializado</div>
-    <div id="ai-response">Presiona "Validar posición actual" para analizar la coherencia de los valores mostrados con la literatura médica.</div>
-    <button id="ai-validate">Validar posición actual</button>
-    <div class="ai-disclaimer">
-      ⚠️ Esta validación NO reemplaza la evaluación clínica real. Solo compara valores con literatura publicada.
-    </div>
-  </div>
 </main>
 
 <script>
@@ -239,8 +224,6 @@ let side = "der";
 let focus = "fe";
 let uploadedFiles = [];
 let extractedText = '';
-let aiEngine = null;
-let aiInitialized = false;
 
 const S = [
     ["Nervio vago", { flex: [1, "Estiramiento leve."], ext: [0, "Poco cambio."], prot: [1, "Tensión leve."], rot: [1, "Lado contrario: se estira."], tilt: [1, "Lado contrario: se estira."] }],
@@ -521,6 +504,9 @@ window.render = function() {
             return { i, n, ...b };
         }).sort((x, y) => y.s - x.s);
 
+        // Capa IA: se guarda el resultado ya calculado. No altera filas, orden ni niveles.
+        window.LAST_RESULT = { rows: rows.map(r => ({ ...r })), acts: A.map(x => ({ ...x })) };
+
         $('out').innerHTML = rows.map(r => '<div class="struct-item s' + r.s + '"><div class="struct-header"><div class="struct-title"><span class="struct-num">' + (r.i + 1) + '</span>' + r.n + '</div><span class="tag tag-s' + r.s + '">' + TAGS[r.s] + '</span></div><div class="struct-desc">' + (r.s === 0 ? "Poca carga." : r.t) + '</div></div>').join("");
     } catch (err) {
         console.error('Error en render:', err);
@@ -612,24 +598,25 @@ try {
     renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);  // Reducido de 1.2 a 0.6
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 0.8);  // Reducido de 2.5 a 1.5
     keyLight.position.set(5, 5, 5);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xb0c4de, 0.4);
+    const fillLight = new THREE.DirectionalLight(0xb0c4de, 0.4);  // Luz de relleno azulada
     fillLight.position.set(-5, 0, 5);
     scene.add(fillLight);
 
-    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);  // Luz trasera
     backLight.position.set(0, -5, -5);
     scene.add(backLight);
 
     headPivot = new THREE.Group();
     scene.add(headPivot);
 
+    // Verificar que OBJLoader está disponible
     if (typeof THREE.OBJLoader === 'undefined') {
         throw new Error('OBJLoader no está disponible. Verifica que el script de OBJLoader se cargó correctamente.');
     }
@@ -658,9 +645,9 @@ try {
                 if (child.isMesh) {
                     child.geometry.computeVertexNormals();
                     child.material = new THREE.MeshStandardMaterial({
-                    color: 0x8e7b6a,
-                    roughness: 0.7,
-                    metalness: 0.0,
+                    color: 0x8e7b6a,  // Color piel más oscuro y definido
+                    roughness: 0.7,   // Más rugosidad para mejor definición
+                    metalness: 0.0,   // Sin metalicidad
                     side: THREE.DoubleSide
                 });
                 }
@@ -712,156 +699,170 @@ window.addEventListener('resize', function() {
 
 console.log('=== INICIALIZACIÓN COMPLETA ===');
 
-// =====================================================================
-// MÓDULO DE VALIDACIÓN CON IA LOCAL (WebLLM)
-// =====================================================================
+/* ============================================================
+   CAPA DE VALIDACIÓN CON IA (opcional, bajo demanda)
+   - No toca S, acts(), eff(), render() ni #out.
+   - Solo lee window.LAST_RESULT y escribe en #ai-out.
+   - La librería y el modelo se cargan únicamente al pulsar.
+   ============================================================ */
+(function () {
+    const CDN = 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.73/lib/index.min.js';
+    const MODELO = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
 
-function getDegAndDesc(k, v) {
-    if (v === 0) return { deg: 0, desc: "neutra" };
-    const q = k === "fe" ? (v > 0 ? "flex" : "ext") : k;
-    const max = window.MOV[q].max;
-    const deg = (max * Math.abs(v) / 100).toFixed(0);
-    let desc = "";
-    if (k === "fe") desc = v > 0 ? `flexión ${deg}°` : `extensión ${deg}°`;
-    else if (k === "rot") desc = v > 0 ? `derecha ${deg}°` : `izquierda ${deg}°`;
-    else if (k === "tilt") desc = v > 0 ? `derecha ${deg}°` : `izquierda ${deg}°`;
-    else if (k === "prot") desc = v > 0 ? `adelantamiento ${v}%` : `retracción ${Math.abs(v)}%`;
-    return { deg, desc };
-}
+    let engine = null;
+    let ocupado = false;
 
-async function initializeAI() {
-    try {
-        $('ai-status').textContent = 'Estado: Verificando WebLLM...';
-        
-        // Verificar que WebLLM esté cargado
-        if (typeof window.webllm === 'undefined') {
-            throw new Error('WebLLM no está cargado. Verifica tu conexión a internet y recarga la página.');
-        }
-        
-        $('ai-status').textContent = 'Estado: Inicializando modelo (esto puede tardar 2-5 minutos la primera vez)...';
-        
-        const engine = await window.webllm.CreateMLCEngine(
-            "Phi-3-mini-4k-instruct-q4f16_1-MLC",
-            {
-                initProgressCallback: (report) => {
-                    $('ai-status').textContent = `Estado: ${report.text}`;
-                    console.log('Progreso WebLLM:', report);
+    const btn = $('ai-run');
+    const estado = $('ai-status');
+    const salida = $('ai-out');
+    const aviso = $('ai-disclaimer');
+    if (!btn || !estado || !salida) return;
+
+    function setEstado(txt, esError) {
+        estado.textContent = txt || '';
+        estado.className = 'ai-status' + (esError ? ' error' : '');
+    }
+
+    function cargarLibreria() {
+        if (window.mlc) return Promise.resolve();
+        return new Promise(function (res, rej) {
+            const s = document.createElement('script');
+            s.src = CDN;
+            s.onload = function () { res(); };
+            s.onerror = function () { rej(new Error('No se pudo descargar la librería de IA.')); };
+            document.head.appendChild(s);
+        });
+    }
+
+    // Convierte el resultado de render() en texto para el prompt.
+    function leerContexto() {
+        const d = window.LAST_RESULT || { rows: [], acts: [] };
+
+        const movs = d.acts.map(function (x) {
+            const m = window.MOV && window.MOV[x.mv];
+            if (!m) return '';
+            if (x.mv === 'prot') return '- ' + m.n + ': ' + Math.abs(x.a) + '%';
+            return '- ' + m.n + ': ' + (m.max * Math.abs(x.a) / 100).toFixed(0) + '°';
+        }).filter(Boolean);
+
+        const nombres = ['poco cambio', 'estiramiento o carga', 'posible estrechamiento'];
+
+        const filas = d.rows.map(function (r) {
+            let extra = '';
+            if (r.m && r.a) {
+                const m = Object.values(window.MOV).find(function (v) { return v.n === r.m; });
+                if (m) {
+                    extra = (m.n === 'Traslación')
+                        ? ' [' + m.n + ' ' + Math.abs(r.a) + '%]'
+                        : ' [' + m.n + ' ' + (m.max * Math.abs(r.a) / 100).toFixed(0) + '°]';
                 }
             }
-        );
-        
-        aiEngine = engine;
-        aiInitialized = true;
-        $('ai-status').textContent = 'Estado: ✅ Modelo cargado y listo';
-        $('ai-response').textContent = 'Modelo cargado correctamente. Presiona "Validar posición actual" para analizar la coherencia de los valores mostrados.';
-        console.log('✅ IA inicializada correctamente');
-        
-    } catch (error) {
-        $('ai-status').textContent = 'Estado: ❌ Error al cargar modelo';
-        $('ai-response').textContent = `Error: ${error.message}\n\nSoluciones:\n1. Verifica que uses Chrome o Edge actualizado\n2. Desactiva bloqueadores de anuncios\n3. Verifica tu conexión a internet\n4. Revisa la consola (F12) para más detalles`;
-        console.error("❌ Error detallado de WebLLM:", error);
-    }
-}
-
-$('ai-toggle').addEventListener('click', () => {
-    const panel = $('ai-panel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    if (!aiInitialized && panel.style.display === 'block') {
-        console.log('Iniciando IA por primera vez...');
-        initializeAI();
-    }
-});
-
-$('ai-close').addEventListener('click', () => {
-    $('ai-panel').style.display = 'none';
-});
-
-$('ai-validate').addEventListener('click', async () => {
-    if (!aiInitialized) {
-        $('ai-response').textContent = 'El modelo aún no está cargado. Espera a que termine la inicialización o recarga la página.';
-        return;
-    }
-    
-    $('ai-response').textContent = ' Analizando coherencia clínica...';
-    
-    const condAnt = $('cond_ant').checked ? "- Anterolistesis o inestabilidad vertebral detectada." : "";
-    const condSed = $('cond_sed').checked ? "- SED o hipermovilidad detectada." : "";
-    const condRec = $('cond_rec').checked ? "- Rectificación de la lordosis cervical detectada." : "";
-
-    const systemPrompt = `Eres un validador de coherencia clínica para un visor 3D de columna cervical.
-
-CONTEXTO DEL PACIENTE:
-${condAnt}
-${condSed}
-${condRec}
-Datos basados en resonancias y radiografías 2022-2024.
-
-RANGOS DE REFERENCIA PUBLICADOS (literatura médica general):
-- Flexión cervical segura: 0° a 45° (con anterolistesis, limitar estrictamente a 30-35°).
-- Extensión cervical segura: 0° a 45°.
-- Rotación cervical segura: 0° a 60° por lado (con inestabilidad, limitar a 45-50°).
-- Inclinación lateral segura: 0° a 45° por lado.
-
-TU FUNCIÓN:
-1. Analiza los valores actuales del visor.
-2. Compara con los rangos de referencia.
-3. Indica si los valores están dentro de rangos seguros, en el límite, o exceden recomendaciones.
-4. NO predigas síntomas.
-5. NO des consejos clínicos o de tratamiento.
-6. NO interpretes la condición del paciente más allá de validar coherencia.
-
-FORMATO DE RESPUESTA:
-- Sé conciso (máximo 3-4 oraciones).
-- Indica claramente si los valores son coherentes con la literatura.
-- Si hay valores en límite o excedidos, menciónalo.
-- Termina SIEMPRE con: "Esta validación no reemplaza la evaluación clínica real."`;
-
-    const feInfo = getDegAndDesc("fe", window.V0.fe);
-    const rotInfo = getDegAndDesc("rot", window.V0.rot);
-    const tiltInfo = getDegAndDesc("tilt", window.V0.tilt);
-    const protInfo = getDegAndDesc("prot", window.V0.prot);
-
-    const userPrompt = `Valores actuales del visor:
-- Flexión/Extensión: ${feInfo.desc}
-- Rotación: ${rotInfo.desc}
-- Inclinación lateral: ${tiltInfo.desc}
-- Traslación: ${protInfo.desc}
-
-Valida la coherencia de estos valores con la literatura médica.`;
-
-    try {
-        const reply = await aiEngine.chat.completions.create({
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt }
-            ],
-            temperature: 0.3,
-            max_tokens: 250
+            return (r.i + 1) + '. ' + r.n + ' — nivel ' + r.s + ' (' + nombres[r.s] + ')' + (r.t ? ' — "' + r.t + '"' : '') + extra;
         });
-        
-        $('ai-response').textContent = reply.choices[0].message.content;
-        console.log('✅ Respuesta de IA generada correctamente');
-        
-    } catch (error) {
-        $('ai-response').textContent = `❌ Error al generar respuesta: ${error.message}`;
-        console.error('Error generando respuesta:', error);
-    }
-});
 
-// Verificar WebGPU al cargar
-if (navigator.gpu) {
-    navigator.gpu.requestAdapter().then(adapter => {
-        if (adapter) {
-            console.log('✅ WebGPU disponible');
-        } else {
-            console.warn('⚠️ WebGPU no disponible en este dispositivo');
+        return {
+            movimientos: movs.length ? movs.join('\n') : '- Sin movimientos activos (posición neutra)',
+            estructuras: filas.length ? filas.join('\n') : '- (sin datos)'
+        };
+    }
+
+    function leerCondiciones() {
+        const c = [];
+        if ($('cond_sed') && $('cond_sed').checked) c.push('SED o hipermovilidad');
+        if ($('cond_ant') && $('cond_ant').checked) c.push('anterolistesis o inestabilidad vertebral');
+        if ($('cond_rec') && $('cond_rec').checked) c.push('rectificación de la lordosis cervical');
+        return c.length ? c.join('; ') : 'sin condiciones declaradas';
+    }
+
+    async function prepararMotor() {
+        if (engine) return engine;
+        if (!navigator.gpu) {
+            throw new Error('Este navegador no soporta WebGPU, necesario para ejecutar la IA local.');
         }
-    }).catch(err => {
-        console.error('❌ Error verificando WebGPU:', err);
+        await cargarLibreria();
+        engine = await window.mlc.createMLCEngine({
+            model: MODELO,
+            initProgressCallback: function (r) {
+                setEstado('Cargando modelo... ' + Math.round((r.progress || 0) * 100) + '%');
+            }
+        });
+        return engine;
+    }
+
+    btn.addEventListener('click', async function () {
+        if (ocupado) return;
+        ocupado = true;
+        btn.disabled = true;
+        salida.className = 'ai-out';
+        salida.textContent = '';
+        aviso.className = 'ai-disclaimer';
+
+        try {
+            setEstado('Preparando IA...');
+            const eng = await prepararMotor();
+
+            const ctx = leerContexto();
+            setEstado('Analizando...');
+
+            const systemPrompt = `Eres un validador de coherencia clínica para un visor 3D de columna cervical.
+
+Recibes dos cosas: (1) los movimientos activos y (2) la tabla de estructuras que el visor ya calculó.
+
+REGLA PRINCIPAL: los niveles de esa tabla (0, 1, 2) son el resultado del visor y NO se modifican. No los recalcules, no los reordenes y no presentes otro nivel como el correcto. Tu tarea es señalar si la combinación movimiento-estructura es coherente con la literatura y si hay algo que convenga advertir.
+
+NIVELES DEL VISOR:
+0 = poco cambio
+1 = estiramiento o carga
+2 = posible estrechamiento o compromiso teórico
+
+CONTEXTO DEL PACIENTE (solo si viene declarado): ${leerCondiciones()}
+
+RANGOS DE REFERENCIA PUBLICADOS (literatura general):
+- Flexión cervical: 0-45°
+- Extensión cervical: 0-45°
+- Rotación: 0-60° por lado
+- Inclinación lateral: 0-45° por lado
+- Con anterolistesis C2-C4: limitar flexión a 30-35° y rotación a 45-50°
+
+QUÉ RESPONDER:
+1. Si los movimientos están dentro de rango, dilo en una línea.
+2. Si una estructura en nivel 2 no parece plausible para ese movimiento, nómbrala y di por qué, en una línea.
+3. Si falta una estructura que la literatura sí consideraría, nómbrala como observación. No agregues filas ni inventes niveles.
+4. Máximo 4 oraciones en total.
+5. NO predigas síntomas. NO des tratamiento. NO hagas diagnóstico.
+
+FORMATO: texto plano en español, máximo 4 oraciones.
+Termina siempre con: "Esta validación no reemplaza la evaluación clínica real."`;
+
+            const userPrompt = `MOVIMIENTOS ACTIVOS:
+${ctx.movimientos}
+
+ESTRUCTURAS CALCULADAS POR EL VISOR (no modificar):
+${ctx.estructuras}
+
+Evalúa la coherencia de esta combinación y señala solo lo que sea relevante.`;
+
+            const reply = await eng.chat.completions.create({
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.3,
+                max_tokens: 260
+            });
+
+            salida.textContent = reply.choices[0].message.content.trim();
+            salida.className = 'ai-out visible';
+            aviso.className = 'ai-disclaimer visible';
+            setEstado('Listo.');
+        } catch (e) {
+            setEstado('Error: ' + e.message, true);
+        } finally {
+            ocupado = false;
+            btn.disabled = false;
+        }
     });
-} else {
-    console.warn('⚠️ WebGPU no soportado en este navegador');
-}
+})();
 </script>
 </body>
 </html>
