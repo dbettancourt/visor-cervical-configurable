@@ -706,8 +706,11 @@ console.log('=== INICIALIZACIÓN COMPLETA ===');
    - La librería y el modelo se cargan únicamente al pulsar.
    ============================================================ */
 (function () {
-    const CDN = 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.73/lib/index.min.js';
-    const MODELO = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
+    const CDN = 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.88/lib/index.min.js';
+    // Phi-3-mini da mejores respuestas, pero compila shaders con "enable f16;"
+    // y no toda GPU expone esa extensión. Qwen2.5-1.5B no la necesita.
+    const MODELO_PREFERIDO = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
+    const MODELO_COMPATIBLE = 'Qwen2.5-1.5B-Instruct-q4f32_1-MLC';
 
     let engine = null;
     let ocupado = false;
@@ -723,15 +726,28 @@ console.log('=== INICIALIZACIÓN COMPLETA ===');
         estado.className = 'ai-status' + (esError ? ' error' : '');
     }
 
-    function cargarLibreria() {
-        if (window.mlc) return Promise.resolve();
-        return new Promise(function (res, rej) {
-            const s = document.createElement('script');
-            s.src = CDN;
-            s.onload = function () { res(); };
-            s.onerror = function () { rej(new Error('No se pudo descargar la librería de IA.')); };
-            document.head.appendChild(s);
-        });
+    let webllm = null;
+
+    // La librería se publica como módulo ES (el archivo termina en "export{...}").
+    // Cargarla con <script src> no funciona: el navegador la interpreta como script
+    // clásico, falla al encontrar "export" y nunca define ningún global.
+    // Por eso se usa import() dinámico y la API correcta de esta versión: CreateMLCEngine.
+    async function cargarLibreria() {
+        if (webllm) return webllm;
+        if (window.mlc && typeof window.mlc.CreateMLCEngine === 'function') {
+            webllm = window.mlc;
+            return webllm;
+        }
+        setEstado('Descargando librería de IA (4 MB)...');
+        try {
+            webllm = await import(CDN);
+        } catch (e) {
+            throw new Error('No se pudo descargar la librería de IA: ' + e.message);
+        }
+        if (!webllm || typeof webllm.CreateMLCEngine !== 'function') {
+            throw new Error('La librería de IA cargó pero no expone CreateMLCEngine.');
+        }
+        return webllm;
     }
 
     // Convierte el resultado de render() en texto para el prompt.
@@ -779,9 +795,23 @@ console.log('=== INICIALIZACIÓN COMPLETA ===');
         if (!navigator.gpu) {
             throw new Error('Este navegador no soporta WebGPU, necesario para ejecutar la IA local.');
         }
-        await cargarLibreria();
-        engine = await window.mlc.createMLCEngine({
-            model: MODELO,
+
+        // El modelo Phi-3-mini usa shaders con "enable f16;". Si el adaptador no
+        // expone shader-f16, ese shader es rechazado y el motor no arranca.
+        // En ese caso se usa Qwen2.5-1.5B, que funciona sin esa extensión.
+        let modelo = MODELO_PREFERIDO;
+        try {
+            const adapter = await navigator.gpu.requestAdapter();
+            if (adapter && !adapter.features.has('shader-f16')) {
+                modelo = MODELO_COMPATIBLE;
+                setEstado('GPU sin soporte f16: usando modelo compatible...');
+            }
+        } catch (e) {
+            // Si la detección falla, se intenta el modelo preferido.
+        }
+
+        const lib = await cargarLibreria();
+        engine = await lib.CreateMLCEngine(modelo, {
             initProgressCallback: function (r) {
                 setEstado('Cargando modelo... ' + Math.round((r.progress || 0) * 100) + '%');
             }
