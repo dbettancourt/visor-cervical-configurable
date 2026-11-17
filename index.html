@@ -707,10 +707,16 @@ console.log('=== INICIALIZACIÓN COMPLETA ===');
    ============================================================ */
 (function () {
     const CDN = 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.88/lib/index.min.js';
-    // Phi-3-mini da mejores respuestas, pero compila shaders con "enable f16;"
-    // y no toda GPU expone esa extensión. Qwen2.5-1.5B no la necesita.
-    const MODELO_PREFERIDO = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
-    const MODELO_COMPATIBLE = 'Qwen2.5-1.5B-Instruct-q4f32_1-MLC';
+
+    // Modelos en orden de intento, del más liviano al más capaz.
+    // Phi-3-mini (~3,7 GB de VRAM) no cabe en portátiles de 6 GB cuando el
+    // escritorio ya usa parte de la GPU: el dispositivo se pierde durante la
+    // carga de pesos y aparece "mapAsync ... Instance reference no longer exists".
+    // Por eso el modelo liviano va primero y el grande queda como opción.
+    const MODELO_LIGERO = 'Qwen2.5-1.5B-Instruct-q4f32_1-MLC';
+    const MODELO_RESPALDO = 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
+    const MODELO_GRANDE = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
+    const USAR_MODELO_GRANDE = false; // pon true solo si tu GPU tiene >= 8 GB libres
 
     let engine = null;
     let ocupado = false;
@@ -796,27 +802,51 @@ console.log('=== INICIALIZACIÓN COMPLETA ===');
             throw new Error('Este navegador no soporta WebGPU, necesario para ejecutar la IA local.');
         }
 
-        // El modelo Phi-3-mini usa shaders con "enable f16;". Si el adaptador no
-        // expone shader-f16, ese shader es rechazado y el motor no arranca.
-        // En ese caso se usa Qwen2.5-1.5B, que funciona sin esa extensión.
-        let modelo = MODELO_PREFERIDO;
-        try {
-            const adapter = await navigator.gpu.requestAdapter();
-            if (adapter && !adapter.features.has('shader-f16')) {
-                modelo = MODELO_COMPATIBLE;
-                setEstado('GPU sin soporte f16: usando modelo compatible...');
+        const lib = await cargarLibreria();
+
+        // Orden de intento. El modelo grande solo entra si se habilita y la GPU
+        // soporta shader-f16 (sus shaders usan "enable f16;").
+        let lista = [MODELO_LIGERO, MODELO_RESPALDO];
+        if (USAR_MODELO_GRANDE) {
+            try {
+                const adapter = await navigator.gpu.requestAdapter();
+                if (adapter && adapter.features.has('shader-f16')) {
+                    lista = [MODELO_GRANDE].concat(lista);
+                }
+            } catch (e) {
+                // Sin detección, se sigue con los modelos livianos.
             }
-        } catch (e) {
-            // Si la detección falla, se intenta el modelo preferido.
         }
 
-        const lib = await cargarLibreria();
-        engine = await lib.CreateMLCEngine(modelo, {
-            initProgressCallback: function (r) {
-                setEstado('Cargando modelo... ' + Math.round((r.progress || 0) * 100) + '%');
+        let ultimoError = null;
+        for (let i = 0; i < lista.length; i++) {
+            const id = lista[i];
+            try {
+                if (i > 0) setEstado('Reintentando con un modelo más liviano...');
+                engine = await lib.CreateMLCEngine(id, {
+                    initProgressCallback: function (r) {
+                        setEstado('Cargando modelo... ' + Math.round((r.progress || 0) * 100) + '%');
+                    }
+                });
+                return engine;
+            } catch (e) {
+                ultimoError = e;
+                console.warn('Modelo ' + id + ' no cargó:', e.message);
             }
-        });
-        return engine;
+        }
+        throw ultimoError || new Error('No se pudo iniciar ningún modelo.');
+    }
+
+    // Traduce los errores de GPU a algo accionable para el usuario.
+    function mensajeDeError(e) {
+        const m = String((e && e.message) || e);
+        if (/device lost|mapAsync|Instance reference|out of memory|GPUBuffer/i.test(m)) {
+            return 'La GPU no pudo cargar el modelo: se quedó sin memoria. Cierra otras pestañas o aplicaciones que usen la GPU y vuelve a intentar.';
+        }
+        if (/WebGPU/i.test(m)) {
+            return 'Este navegador no soporta WebGPU. Usa Chrome o Edge actualizado con aceleración por hardware activa.';
+        }
+        return 'Error: ' + m;
     }
 
     btn.addEventListener('click', async function () {
@@ -886,7 +916,7 @@ Evalúa la coherencia de esta combinación y señala solo lo que sea relevante.`
             aviso.className = 'ai-disclaimer visible';
             setEstado('Listo.');
         } catch (e) {
-            setEstado('Error: ' + e.message, true);
+            setEstado(mensajeDeError(e), true);
         } finally {
             ocupado = false;
             btn.disabled = false;
